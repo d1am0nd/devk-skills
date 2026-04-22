@@ -1,6 +1,6 @@
 ---
 name: devk-final-review
-description: Subagent-only skill. Use when invoked by devk-executing-plan after all sections are done and per-section reviews have been addressed. Performs a holistic end-of-work review of the complete changeset. Carefully budgets context - explicitly excludes lockfiles, generated files, vendored code, formatting-only diffs, and things not substantive to review. Focuses on cross-section integration issues, end-to-end correctness, and anything missed by per-section reviews. Returns critical findings that must be fixed before handoff.
+description: Subagent-only. Invoked by devk-executing-plan for holistic end-of-work review after all sections complete. Do not trigger directly.
 ---
 
 # devk-final-review — Holistic end-of-work review with tight context budget

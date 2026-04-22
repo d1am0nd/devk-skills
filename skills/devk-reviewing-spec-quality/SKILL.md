@@ -1,6 +1,6 @@
 ---
 name: devk-reviewing-spec-quality
-description: Subagent-only skill. Use when invoked by devk-writing-spec to independently review a spec for engineering quality - YAGNI violations, premature abstraction, testability, error handling sanity, scope creep, over-engineering, and hidden hacks. Returns structured findings (blocker/concern/nit). Complements devk-reviewing-spec-architecture; this one is about engineering discipline, not structural design.
+description: Subagent-only. Invoked by devk-writing-spec for independent engineering-quality review. Do not trigger directly.
 ---
 
 # devk-reviewing-spec-quality — Independent quality review

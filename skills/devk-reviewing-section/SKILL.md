@@ -1,6 +1,6 @@
 ---
 name: devk-reviewing-section
-description: Subagent-only skill. Use when invoked by devk-executing-plan after a plan section completes. Reviews the section's diff and directly touched files for bugs, missed edge cases, off-by-one errors, error-path gaps, test gaps, and hidden hacks. Returns structured findings (blocker/concern/nit). Stays tightly scoped to one section - does NOT review the whole project.
+description: Subagent-only. Invoked by devk-executing-plan after a plan section completes, to review that section's diff. Do not trigger directly.
 ---
 
 # devk-reviewing-section — Per-section code review

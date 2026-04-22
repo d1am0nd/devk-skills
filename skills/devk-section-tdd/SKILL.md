@@ -1,6 +1,6 @@
 ---
 name: devk-section-tdd
-description: Subagent-only skill. Use when invoked by devk-executing-plan to implement a single plan section using strict TDD. Reads the assigned section from .devk/plan.md, writes tests first (confirms they fail), implements minimum to pass, refactors if needed, announces material decisions, returns a concise summary. One section per subagent invocation - do NOT implement multiple sections or the whole plan.
+description: Subagent-only. Invoked by devk-executing-plan to implement one plan section with strict TDD. Do not trigger directly.
 ---
 
 # devk-section-tdd — Implement one section, TDD discipline

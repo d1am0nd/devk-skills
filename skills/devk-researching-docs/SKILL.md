@@ -1,6 +1,6 @@
 ---
 name: devk-researching-docs
-description: Subagent-only skill. Use when invoked by devk-writing-spec (or during execution when a new dependency or external API is introduced). Fetches current official documentation for specified packages/APIs via WebFetch, verifies that proposed usage matches current best practices, flags version/API mismatches, notes deprecations and known pitfalls. Returns a short, citable report. Prevents building against stale training-data knowledge.
+description: Subagent-only. Invoked by devk-writing-spec (or execution) to verify dependency/API usage against current docs. Do not trigger directly.
 ---
 
 # devk-researching-docs — Verify we're using current docs, not stale training data

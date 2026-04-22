@@ -1,6 +1,6 @@
 ---
 name: devk-reviewing-spec-architecture
-description: Subagent-only skill. Use when invoked by devk-writing-spec to independently review a spec for architectural soundness. Reviews coupling, layering, consistency with existing project conventions, abstraction placement, data flow, and separation of concerns. Returns structured findings (blocker/concern/nit) that devk-writing-spec classifies and acts on.
+description: Subagent-only. Invoked by devk-writing-spec for independent architecture review. Do not trigger directly.
 ---
 
 # devk-reviewing-spec-architecture — Independent architecture review
