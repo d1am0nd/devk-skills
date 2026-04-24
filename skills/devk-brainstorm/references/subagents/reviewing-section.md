@@ -20,7 +20,7 @@ Stay scoped. You are NOT reviewing the whole project. You are NOT second-guessin
 
 ## How to review
 
-1. Find out what changed. Use `git diff` (compared to the last known-good point — if unclear, diff against HEAD~1 or use git status) to see the section's actual changes.
+1. Find out what changed. The section's changes are uncommitted at review time — use `git diff HEAD` (and `git status` for new files). Do NOT use `HEAD~1`; that would pull in the previous section's commit.
 2. Read the section's entry in `.devk/plan.md` — the acceptance criteria define "done."
 3. Read the changed files fully — not just the diff — since a diff can hide context issues.
 4. Run the section's tests yourself (if the test command is obvious from project setup) and verify they pass. Don't trust the subagent's claim.

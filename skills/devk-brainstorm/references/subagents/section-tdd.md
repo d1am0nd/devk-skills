@@ -41,7 +41,7 @@ Implement just enough code to pass this test. Don't gold-plate. Don't add featur
 
 ### Step 4: Run tests and watch them pass
 
-Run the specific test (and ideally the full section's test set). Confirm it passes. If it doesn't, iterate until it does. If you iterate more than ~3 times without convergence, you're probably stuck — invoke `devk-debugging` (via the Skill tool) to restructure your approach before thrashing further.
+Run the specific test (and ideally the full section's test set). Confirm it passes. If it doesn't, iterate until it does. If you iterate more than ~3 times without convergence, you're probably stuck — return a STUCK report (see "Return format" below). The orchestrator owns debugging dispatch; don't self-invoke.
 
 ### Step 5: Refactor (if needed)
 
@@ -94,9 +94,7 @@ Signs you're stuck:
 - Repeatedly patching symptoms instead of understanding the root cause
 - Tempted to silent-try/except or comment out an assertion
 
-Stop. Invoke `devk-debugging` via the Skill tool. Provide the failing test, what you expected, what happened, what you tried. Follow its process.
-
-If even that can't resolve it, return control to the orchestrator with a "stuck" status and the full context. Do NOT ship a broken or hacked section.
+Stop. Return a STUCK report to the orchestrator immediately with the full context (failing test, what you expected, what happened, what you tried). The orchestrator will dispatch a dedicated debugging subagent — that's its job, not yours. Do NOT ship a broken or hacked section.
 
 ## Return format
 
@@ -153,4 +151,4 @@ If the section could NOT be completed, return:
 - Tests first. Watch them fail before implementing.
 - No hacks. No silent try/except. No commenting out tests.
 - No new deps without announcing them in the return summary.
-- If stuck → devk-debugging → if still stuck → return STUCK, don't ship broken.
+- If stuck → return STUCK immediately, let the orchestrator dispatch debugging. Don't ship broken or hacked.

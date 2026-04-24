@@ -20,7 +20,7 @@ If any are present AND the current user message is clearly about a *different* f
 > **b) Archive and start fresh** — move prior `.devk/*.md` to `.devk/archive/<YYYY-MM-DD>-<slug>/`.
 > **c) Discard** — delete prior in-flight files (destructive; I'll confirm).
 
-Act on the answer the same way `devk-brainstorm` does: for (a) route to the furthest-along downstream reference (`requirements.md` only → continue here; `spec.md` present → load `references/writing-plan.md`; `plan.md` present → load `references/executing-plan.md`). For (b) archive+commit. For (c) show-and-confirm delete. Then continue with clarification if the user chose (b) or (c).
+Act on the answer the same way `devk-brainstorm` does: for (a) route to the furthest-along downstream reference (`requirements.md` only → load `references/writing-spec.md`; `spec.md` present → load `references/writing-plan.md`; `plan.md` or `progress.md` present → load `references/executing-plan.md`). For (b) archive+commit. For (c) show-and-confirm delete. Then continue with clarification if the user chose (b) or (c).
 
 If the state clearly matches the current request, just continue — don't make it a ceremony.
 

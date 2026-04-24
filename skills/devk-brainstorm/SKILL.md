@@ -1,6 +1,6 @@
 ---
 name: devk-brainstorm
-description: Entry point for the devk LLM-driven development workflow (brainstorming ideas, clarifying requirements, writing specs, planning, and executing). Use whenever the user starts work that fits this workflow — questions like "how should I...", "let's build...", "I'm thinking about...", "can we improve...", "let's add X", "let's implement Y", "let's refactor Z", "help me figure out Y", "just bouncing ideas", "no code yet, what should I...", "what's the best way to...", "let's think through", "fix bug", "wire up", or invokes /devk-brainstorm explicitly. This is the SINGLE entry to the workflow — downstream phases (requirements clarification, spec, plan, execution, per-phase reviews) live as reference files inside this skill and are loaded as the workflow progresses.
+description: Entry point for the devk LLM-driven development workflow. Primarily invoked explicitly via /devk-brainstorm. Routes into idea exploration or structured implementation (clarify → spec → plan → execute → review), with downstream phases loaded from references/ as the workflow progresses.
 ---
 
 # devk-brainstorm — Entry point for LLM-driven development

@@ -50,9 +50,12 @@ Treat this as: *the human wants a status line, not a transcript.* If something i
 ## Setup before dispatching
 
 1. Read `.devk/plan.md` carefully — sections, parallel groups, dependencies, TDD outlines.
-2. Create `.devk/progress.md` (if not present) to track section status. Schema:
+2. **Record the pre-execution baseline.** If this is a git repo, capture the current HEAD SHA now — the final-review subagent needs it to diff the full changeset. Run `git rev-parse HEAD` and remember the result; you'll pass it into the final-review prompt. If not a git repo, note "no baseline (not a git repo)" — final review will do its best from working-tree state.
+3. Create `.devk/progress.md` (if not present) to track section status. Schema:
    ```markdown
    # Progress
+   Baseline: <sha from step 2, or "no baseline">
+
    - [x] S1: <title> — done, reviewed, 0 blockers
    - [ ] S2: <title> — in progress
    - [ ] S3a: <title> — pending (parallel with S3b)
@@ -215,7 +218,7 @@ Read `references/subagents/final-review.md` into working memory, then dispatch o
 
   Context:
   - .devk/requirements.md, .devk/spec.md, .devk/plan.md have the intent.
-  - The changeset is the commit range from before execution started to HEAD.
+  - Pre-execution baseline SHA: <paste the baseline SHA recorded in Setup step 2>. The changeset to review is <baseline>..HEAD. (If "no baseline" was recorded, review the working tree + uncommitted diff.)
   - Return the structured report the instructions specify.
   ```
 
