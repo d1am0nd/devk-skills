@@ -1,6 +1,6 @@
 ---
 name: devk-executing-plan
-description: Use after devk-writing-plan has produced an approved plan at .devk/plan.md. This skill orchestrates execution - it dispatches each plan section to a fresh subagent running devk-section-tdd, runs parallel-safe groups in parallel, spawns devk-reviewing-section after each section completes, incorporates fixes, and handles the mid-flight replan escape hatch when something fundamental turns out to be wrong. Ends by invoking devk-final-review.
+description: Pipeline step in the devk workflow — do NOT use as an entry point. The workflow is entered through devk-brainstorm. Use only after devk-writing-plan has produced an approved plan at .devk/plan.md. This skill orchestrates execution - it dispatches each plan section to a fresh subagent running devk-section-tdd, runs parallel-safe groups in parallel, spawns devk-reviewing-section after each section completes, auto-fixes confirmed improvements, and handles the mid-flight replan escape hatch. Ends by invoking devk-final-review and offering to tidy up .devk/.
 ---
 
 # devk-executing-plan — Dispatch sections, review, advance, replan if needed
@@ -18,15 +18,17 @@ The plan is approved. Execute it section by section (with parallelism where the 
 
 ## Output discipline (critical)
 
-You are orchestrating — potentially dispatching many subagents whose individual outputs could flood the conversation. **Be terse to the human. Be silent during tool use.**
+You are orchestrating — potentially dispatching many subagents whose individual outputs could flood the conversation. **Be terse to the human. Be silent during tool use.** The human is in product mode now — they want to know progress, not implementation mechanics.
 
 Only surface messages to the user at these moments:
-- **Starting execution** — one line: "Starting execution: N sections, <K parallel groups>. Committing per section."
-- **Section complete** — one line per section: "✓ S<ID> done (N tests passing, N files, committed)."
-- **Parallel group complete** — "✓ Group [S3a, S3b] complete."
-- **Blocker / replan signal** — always surface in full.
-- **Final review ready** — "Running final review."
-- **All done** — concise summary (see "When all sections are done").
+- **Starting execution** — one line: "Starting — <N pieces of work> ahead. I'll report back per piece and commit as I go."
+- **Section complete** — one short line per section: "✓ <short human-readable description> done."
+- **Parallel group complete** — "✓ <two descriptions> done in parallel."
+- **Blocker / replan signal** — always surface in full. Frame the problem in plain language first, then the technical detail.
+- **Final review running** — "Doing a last-pass review before handing back."
+- **All done** — concise PM-friendly wrap-up (see "When all sections are done").
+
+Avoid jargon in status lines. Section IDs like "S3a" are for internal tracking; the user sees "the registration endpoint" or "the email-validation piece". Keep the artifacts (`plan.md`, commits) technical — the *human-facing voice* is what softens.
 
 Do NOT narrate:
 - Each Agent call you make
@@ -108,11 +110,13 @@ For each completed section (or each of a parallel group), spawn a reviewer:
 
 Read the findings.
 
+**Default stance: if a finding is a confirmed improvement, fix it. Don't file it as a TODO for the user.** The user expects you to own quality. Handing back a list of "things I noticed but didn't do" is not the job.
+
 **Blocker findings:** must be fixed before proceeding. You fix them in the main agent OR dispatch a small fix subagent. Re-verify tests. Do NOT start the next section until blockers are cleared.
 
-**Concern findings:** if easy, fix inline. If substantial, add to `.devk/progress.md` under "carry-forward concerns" and address in a dedicated fix pass before `devk-final-review`.
+**Concern findings:** *default to fixing them now*. If the fix is clearly a win (tightens a contract, plugs an edge case, removes a hack, simplifies code) — do it as part of this section. If fixing would materially expand scope (separate refactor, new dependency, a day of work), *then* add to `.devk/progress.md` under "carry-forward concerns" and handle in the dedicated fix pass before final review. Escalate to the user only when the fix is ambiguous — when there's a real judgment call about whether it's an improvement at all.
 
-**Nit findings:** ignore unless the fix is a one-liner that improves clarity.
+**Nit findings:** fix anything that's a one-liner quality bump. Drop the rest silently.
 
 ### 5. Stuck handling (a section fails or spins)
 
@@ -130,22 +134,23 @@ You hit a replan signal when ANY of:
 - A reviewer flags that the approach (not the code) is wrong.
 - Debugging reveals the spec-level assumption is broken (e.g., "the API we're integrating with doesn't work the way the spec assumed").
 
-**STOP.** Mark progress accordingly. Present to the human:
+**STOP.** Mark progress accordingly. Present to the human in plain language:
 
-> ## Replan needed — section S<ID>
+> ## Hit a snag — need your input
 >
-> What happened: <1-2 sentences>
+> **What happened:** <1-2 sentences in plain language. E.g., "The third-party API we're integrating with works differently than we assumed — it paginates instead of returning all results at once.">
 >
-> Why the plan doesn't work as-is: <specific>
+> **Why the plan doesn't fit anymore:** <specific, but non-technical if possible>
 >
-> Options:
-> **a)** Amend the plan: <minimal change that fixes it>
-> **b)** Amend the spec: <change that might need re-review>
-> **c)** Pause and redirect: <if the whole thing should rethink>
+> **Options:**
+> **a)** Small course correction — <minimal change that fixes it, no re-planning needed>
+> **b)** Rework the design a bit — <change that touches the spec; will need a quick re-review>
+> **c)** Step back and rethink — <if the whole approach needs another look>
 >
-> What's done so far: <list>. What's blocked: <list>.
+> **What's done so far:** <plain-language list of what's working>.
+> **What's blocked:** <plain-language list>.
 >
-> Which path?
+> Which way do you want to go?
 
 **Do not silently fix a spec-level problem with a code hack.** That's exactly the "no hacks" principle's core case.
 
@@ -178,9 +183,57 @@ After each section + review + commit:
 
 ## When all sections are done
 
-Run the carry-forward concern pass (the substantive concerns you deferred). Fix them. Commit them: `devk: carry-forward fixes`.
+### 1. Carry-forward concern pass
 
-Then invoke `devk-final-review` via the Skill tool. If it finds critical issues, fix them and commit: `devk: fixes from final review`. That's the last quality gate before handoff.
+Run through any concerns you deferred. Fix them. Commit: `devk: carry-forward fixes`.
+
+### 2. Final review
+
+Invoke `devk-final-review` via the Skill tool.
+
+When it returns, **apply the same default as per-section reviews: fix confirmed improvements inline, don't file them as TODOs.**
+
+- **Critical findings** → fix. No discussion needed.
+- **Worth-addressing findings** → if any of them are clearly correct improvements (a real bug, a missed edge case, an inconsistency, a hidden hack, a missed integration), fix them inline as part of this pass. Default to doing, not asking.
+- **Only escalate to the user when:** a finding requires a spec-level change, introduces a new dependency, is clearly out of scope of the feature, or is genuinely ambiguous (it might not be an improvement). In those cases, state the finding plainly and ask.
+
+Commit everything fixed in this pass: `devk: improvements from final review`. That's the last quality gate before handoff.
+
+### 3. Wrap-up and .devk/ cleanup offer
+
+Once final review is clean and all improvements are committed, present the wrap-up.
+
+Keep the voice PM-friendly — describe what was built in product terms, not technical ones. Example tone: "Login now works end-to-end with Google sign-in and remembers sessions for a week" rather than "Implemented `AuthController.googleCallback` with JWT rotation".
+
+Use this shape:
+
+> ## Done
+>
+> <1-3 sentences describing what the user can now do, in plain language.>
+>
+> <Optional: one line about anything user-visible you want to call out — a new config flag, a migration they need to run, anything worth knowing.>
+>
+> **Working notes** in `.devk/`:
+> - `requirements.md` — what we set out to build
+> - `spec.md` — the technical design
+> - `plan.md` — the N sections we broke it into (all done, all reviewed)
+> - `progress.md` — section-by-section progress log
+>
+> What should I do with these? They've served their purpose.
+>
+> **a) Archive** — move to `.devk/archive/<YYYY-MM-DD>-<slug>/` (keeps a paper trail, easy to look back on). *Default.*
+> **b) Keep only a slim summary** — one file with the feature title + any residual TODOs; delete the rest.
+> **c) Delete everything** — clean slate. I'll confirm before removing.
+> **d) Leave as-is.**
+
+Act on the answer:
+
+- **a)** `mkdir -p .devk/archive/<date>-<slug>/` and `git mv` (or `mv` if untracked) the four `.md` files into it. Commit: `devk: archive working notes for <feature title>`.
+- **b)** Write a single `.devk/summary.md` with: feature title, one-paragraph description of what shipped, and any TODOs worth remembering (drawn from carry-forward concerns / final review items you chose not to fix). Delete the four original files. Commit: `devk: summarize and clean up working notes for <feature title>`.
+- **c)** Show the file list, ask "delete these? yes/no", then `rm` on confirmation. Commit: `devk: remove working notes for <feature title>`.
+- **d)** Do nothing.
+
+Skip the commit step silently if not a git repo.
 
 ## What you do NOT do
 
@@ -195,5 +248,8 @@ Then invoke `devk-final-review` via the Skill tool. If it finds critical issues,
 - Quality over speed. A broken section stops the line.
 - Parallel groups in one message, serial sections one at a time.
 - Per-section review is mandatory.
+- **Default to fixing confirmed improvements. Don't hand the user a TODO list when you could just do the thing.**
+- Human-facing voice is PM-friendly; technical artifacts stay technical.
 - Replan is a first-class outcome, not a failure.
 - `devk-final-review` is the next skill after all sections pass review.
+- After final review: auto-fix, commit, then present wrap-up + `.devk/` cleanup offer.

@@ -60,8 +60,12 @@ Do NOT read the entire project. Do NOT review code that wasn't part of this sect
 ## Severity rubric
 
 - **Blocker** — a bug, missed critical edge case, hidden hack, silent error swallow, or test gap on a critical path. Something that would cause a real user to see wrong behavior, or that makes the code untrustworthy. Must be fixed before the next section.
-- **Concern** — real issue, but fixable in a dedicated cleanup pass before final review. Not blocking the next section.
-- **Nit** — cosmetic, naming, minor clarity. Ignore unless very easy.
+- **Concern** — real issue, fixable without major rework. The orchestrator will fix these inline by default; only escalate ones that materially expand scope.
+- **Nit** — cosmetic, naming, minor clarity. The orchestrator will pick up one-liner wins; skip the rest.
+
+## Important: your findings are to-dos for the orchestrator, not for the user
+
+The orchestrator's default is to **fix confirmed improvements inline**. Don't hedge — if you found a real bug or a real improvement, say so directly and clearly. State whether each finding is clearly a correct improvement (just-do-it) or genuinely ambiguous (needs user input). Avoid wording like "the user could consider X" or "might be worth filing as a TODO" — if it's worth fixing, say "Fix: X". The orchestrator reads your report and acts on it; the user does not.
 
 ## Hidden-hack watchlist (blocker by default)
 

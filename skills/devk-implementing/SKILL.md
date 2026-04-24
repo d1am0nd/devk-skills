@@ -1,6 +1,6 @@
 ---
 name: devk-implementing
-description: Use when the user is ready to implement something real - features, bug fixes, refactors, integrations. Triggered from devk-brainstorm path (b), or directly when the user says "let's build", "let's implement", "add feature", "fix bug", "refactor", "wire up X". This is the requirements-clarification phase of the devk LLM-driven development workflow - no code gets written here. You ask one question at a time to pin down requirements, then hand off to devk-writing-spec. Prefer this over jumping straight to code; skipping clarification leads to rework.
+description: Pipeline step in the devk workflow — prefer entering through devk-brainstorm. Use when the user is ready to implement something real - features, bug fixes, refactors, integrations. Triggered from devk-brainstorm path (b), or directly when the user says "let's build", "let's implement", "add feature", "fix bug", "refactor", "wire up X". This is the requirements-clarification phase - no code gets written here. You ask one question at a time to pin down requirements, then hand off to devk-writing-spec. Prefer this over jumping straight to code; skipping clarification leads to rework.
 ---
 
 # devk-implementing — Clarify requirements before any spec or code
@@ -160,6 +160,28 @@ Before invoking `devk-writing-spec`, save the approved summary to `.devk/require
 - Write the summary to `.devk/requirements.md`
 
 This is one of the few file operations this skill performs. Do it quietly after approval — don't make it a ceremony.
+
+## If the user wants to stop here
+
+If the user signals they want to pause or drop this ("let's stop here", "I changed my mind", "actually nevermind", "pause this", "forget it"), don't silently halt with state left behind. Acknowledge and offer to tidy up.
+
+> Got it — pausing this.
+>
+> Working notes in `.devk/`:
+> - <list only files that actually exist — requirements.md if you saved one, otherwise "nothing yet">
+>
+> What should I do with them?
+>
+> **a) Leave as-is** — I'll pick up next time. *Default if you might come back to this.*
+> **b) Archive** — move to `.devk/archive/<YYYY-MM-DD>-<slug>/`.
+> **c) Delete** — clean slate. I'll confirm first.
+
+Act on the answer:
+- **a)** Do nothing.
+- **b)** `mkdir -p .devk/archive/<date>-<slug>/`, `git mv` (or `mv`) existing `.devk/*.md` into it. Commit if git repo: `devk: archive in-flight work (<slug>)`.
+- **c)** Show the list, confirm, then `rm`. Commit: `devk: discard in-flight work (<slug>)`.
+
+If nothing has been written to `.devk/` yet, skip the offer entirely — nothing to clean up.
 
 ## Anti-patterns
 

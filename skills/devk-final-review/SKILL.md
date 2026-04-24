@@ -142,7 +142,11 @@ Use the output format below.
 ## Severity rubric
 
 - **Critical** — breaks the feature, ships a bug, surfaces a security issue, integrates incorrectly. Must be fixed before the user sees it.
-- **Worth addressing** — quality issue that should be fixed soon, but the feature fundamentally works.
+- **Worth addressing** — quality issue that should be fixed soon, but the feature fundamentally works. The orchestrator's default is to fix these inline rather than hand them to the user as TODOs.
+
+## Important: your findings are to-dos for the orchestrator, not for the user
+
+The orchestrator acts on your report. Its default is to **fix confirmed improvements inline** and commit them before handoff. So write findings as action items, not suggestions. Be explicit about which findings you're certain are correct improvements (the orchestrator should just fix them) versus which are genuinely ambiguous or require a spec-level change (the orchestrator should escalate to the user). Don't hedge with "consider" or "might be worth"; if it's a real improvement, state the fix. If you're not sure, say you're not sure — that's also useful signal.
 
 ## What NOT to do
 

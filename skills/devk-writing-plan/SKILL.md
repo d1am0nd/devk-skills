@@ -1,6 +1,6 @@
 ---
 name: devk-writing-plan
-description: Use after devk-writing-spec has finished and the spec is user-approved. This skill converts .devk/spec.md into an executable plan at .devk/plan.md - work divided into self-contained sections, each with TDD steps pre-written, explicit dependencies, and parallel-safe groups marked. Output is ready to be consumed by devk-executing-plan which dispatches sections to subagents. Presents the plan for the user's final approval before execution begins.
+description: Pipeline step in the devk workflow — do NOT use as an entry point. The workflow is entered through devk-brainstorm. Use only after devk-writing-spec has finished and the spec is user-approved. This skill converts .devk/spec.md into an executable plan at .devk/plan.md - work divided into self-contained sections, each with TDD steps pre-written, explicit dependencies, and parallel-safe groups marked. Output is ready to be consumed by devk-executing-plan which dispatches sections to subagents. Presents the plan for the user's final approval before execution begins.
 ---
 
 # devk-writing-plan — Turn the approved spec into an executable plan
@@ -119,18 +119,25 @@ Don't guess on fundamentals. Small gaps you can fill with a one-line decision in
 
 ## Approval gate (third and final gate before execution)
 
+Present the plan in PM-friendly terms. The human is approving *the shape of the work*, not reviewing the technical plan line by line. Full plan lives at `.devk/plan.md`; your presentation is a summary, not a dump.
+
 When the plan is written, present:
 
-> ## Plan ready for approval
+> ## Plan ready for your sign-off
 >
-> Written to `.devk/plan.md`. Structure:
+> Here's how I'll build this, broken into pieces I can ship one at a time.
 >
-> - **Sections:** <N total, split by goal>
-> - **Parallel groups:** <describe, e.g., "S3a ∥ S3b">
-> - **Estimated scope:** <short description>
-> - **Material decisions added during planning:** <any new ones not already in spec>
+> **The pieces:**
+> 1. <Plain-language description of section 1, e.g., "Database changes for user sessions">
+> 2. <Section 2 in plain language>
+> 3. <Section 3 — or for parallel groups: "The API endpoint and the UI can go in parallel">
+> <...>
 >
-> Approve and I'll hand off to `devk-executing-plan` (which dispatches each section to a fresh subagent with TDD and per-section review). Or flag what you want to change.
+> **Order:** <1-2 sentences on why this order. E.g., "Foundation first, then the user-facing parts, then polish.">
+>
+> **Anything new I decided during planning:** <material decisions not already in the spec, one line each. Omit if none.>
+>
+> Sound right? Approve and I'll start building — I'll report back per piece as I go. Or flag what to change.
 
 **Wait for explicit approval.** On approval:
 
@@ -150,3 +157,26 @@ When the plan is written, present:
 - Parallel-safe is a strong claim. Default to sequential when uncertain.
 - TDD per section, no exceptions without justification.
 - Approval gate is the LAST stop before execution. Make it easy to approve or redirect.
+- Artifact (`plan.md`) is technical. Your human-facing presentation is PM-friendly.
+
+## If the user wants to stop here
+
+If the human wants to pause or drop this after seeing the plan ("let's not do this", "shelving it", "changed my mind"), acknowledge and offer to tidy up `.devk/`.
+
+> Got it — pausing this.
+>
+> Working notes in `.devk/`:
+> - `requirements.md` — what we agreed to build
+> - `spec.md` — the design
+> - `plan.md` — the breakdown
+>
+> What should I do with them?
+>
+> **a) Leave as-is** — I'll pick up next time. *Default if you might come back to this.*
+> **b) Archive** — move to `.devk/archive/<YYYY-MM-DD>-<slug>/`.
+> **c) Delete** — clean slate. I'll confirm first.
+
+Act on the answer:
+- **a)** Do nothing.
+- **b)** `mkdir -p .devk/archive/<date>-<slug>/`, `git mv` (or `mv`) existing `.devk/*.md` into it. Commit if git repo: `devk: archive in-flight work (<slug>)`.
+- **c)** Show the list, confirm, then `rm`. Commit: `devk: discard in-flight work (<slug>)`.
