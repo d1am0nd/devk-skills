@@ -352,7 +352,7 @@ After writing the report, return a **short** summary to the user (who may or may
 - Path to the full report
 - Optional: one line on what was notably *healthy* about the project, if anything stood out positively
 
-That's the end of the run. Do not propose to start executing any of the refactors — this skill is proposal-only. If the human wants to act on a finding, they'll trigger `devk-brainstorm` or `devk-implementing` on it separately.
+That's the end of the run. Do not propose to start executing any of the refactors — this skill is proposal-only. If the human wants to act on a finding, they'll kick off `devk-brainstorm` on it separately.
 
 ---
 
@@ -367,8 +367,8 @@ That's the end of the run. Do not propose to start executing any of the refactor
 
 ## When this skill is a bad fit
 
-- The user wants code changes now. → Use `devk-brainstorm` or `devk-implementing`.
-- The user wants a review of a specific PR or recent commits. → Use `code-review` or `devk-reviewing-section`.
+- The user wants code changes now. → Use `devk-brainstorm`.
+- The user wants a review of a specific PR or recent commits. → Use `code-review`.
 - The user wants a security audit specifically. → This skill touches security smells but is not a replacement for a dedicated security review.
 - The project is empty or near-empty. → There is no meaningful debt to find. Return an all-clear report quickly.
 

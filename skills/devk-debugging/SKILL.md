@@ -1,6 +1,6 @@
 ---
 name: devk-debugging
-description: Use when encountering any bug, test failure, stuck section, or unexpected behavior - before trying more fixes. Especially triggered by devk-section-tdd when a test won't pass after a few iterations. Enforces hypothesis-driven debugging (form hypothesis → test it → learn → iterate) instead of shotgun fixes. Prevents the "just try stuff" failure mode that makes bugs worse. Also triggered directly when the user says "this isn't working", "X is broken", "why is Y happening".
+description: Use when encountering any bug, test failure, stuck section, or unexpected behavior - before trying more fixes. Also invoked by the devk section-implementation phase when a test won't pass after a few iterations. Enforces hypothesis-driven debugging (form hypothesis → test it → learn → iterate) instead of shotgun fixes. Prevents the "just try stuff" failure mode that makes bugs worse. Also triggered directly when the user says "this isn't working", "X is broken", "why is Y happening".
 ---
 
 # devk-debugging — Hypothesis-driven debugging, not shotgun fixes
@@ -101,7 +101,7 @@ Stop. Step back and either:
 
 ## When invoked as a subagent
 
-If the caller is `devk-section-tdd` or `devk-executing-plan`, return a clear report:
+If the caller is another devk phase (section implementation or execution orchestration) rather than the user directly, return a clear report:
 
 ```markdown
 # Debugging report: <short description>
