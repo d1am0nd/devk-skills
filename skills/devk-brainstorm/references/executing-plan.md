@@ -1,18 +1,26 @@
----
-name: devk-executing-plan
-description: Pipeline step in the devk workflow — do NOT use as an entry point. The workflow is entered through devk-brainstorm. Use only after devk-writing-plan has produced an approved plan at .devk/plan.md. This skill orchestrates execution - it dispatches each plan section to a fresh subagent running devk-section-tdd, runs parallel-safe groups in parallel, spawns devk-reviewing-section after each section completes, auto-fixes confirmed improvements, and handles the mid-flight replan escape hatch. Ends by invoking devk-final-review and offering to tidy up .devk/.
----
+# Executing the plan — dispatch sections, review, advance, replan if needed
 
-# devk-executing-plan — Dispatch sections, review, advance, replan if needed
+> Reference loaded by `devk-brainstorm` after `references/writing-plan.md` has produced an approved plan. Follow these instructions as if they replaced the main skill.
 
 The plan is approved. Execute it section by section (with parallelism where the plan marked it safe), review each section's output, fix blockers, and proceed. Escalate to the human only when the plan itself needs to change.
+
+## How subagent dispatch works here
+
+This phase spawns several kinds of subagent — section implementers, section reviewers, a debugging helper, and a final-review agent. Subagents do NOT load skills themselves. You read the relevant subagent reference file and **inline its content into the subagent's prompt**. That pattern repeats for every dispatch in this document. The reference files live at:
+
+- `references/subagents/section-tdd.md` — for implementing a single section (used per section)
+- `references/subagents/reviewing-section.md` — for per-section review (used per section)
+- `references/subagents/final-review.md` — for the end-of-work holistic review (used once)
+- `references/subagents/researching-docs.md` — for dep/API verification (used if a new dep appears mid-execution)
+
+`devk-debugging` stays as a top-level skill (users also invoke it directly). When you need it, instruct the subagent to load it via the Skill tool — that's an exception to the inlining pattern for this one skill.
 
 ## Core principles
 
 - **Quality over speed. No hacks. Project lives for years.** If a section can't be completed properly, you pause and reassess — you do NOT hand-wave past a failure.
-- **One subagent per section.** Fresh context for each. Subagents run `devk-section-tdd`.
+- **One subagent per section.** Fresh context for each. Subagents follow the inlined contents of `references/subagents/section-tdd.md`.
 - **Parallel groups run in parallel**, in a single message with multiple Agent tool calls. Sequential sections run one after the other.
-- **Per-section review is mandatory**, not optional. Each completed section → `devk-reviewing-section` subagent before the next starts (or the next group starts).
+- **Per-section review is mandatory**, not optional. Each completed section → reviewer subagent (inlining `references/subagents/reviewing-section.md`) before the next starts (or the next group starts).
 - **Each section commits independently** once it passes review. This gives a clean, bisect-friendly history and lets the human inspect any checkpoint.
 - **Replan is always on the table.** If execution reveals the plan is wrong, stop and loop in the human with options.
 
@@ -58,21 +66,21 @@ For each section (or parallel group) in execution order:
 
 ### 1. Dispatch
 
-**Sequential section:** one Agent call.
+**Sequential section:** one Agent call. Before dispatching, read `references/subagents/section-tdd.md` once into working memory — you'll reuse it across every section dispatch in this execution.
 
 - `subagent_type`: `"general-purpose"`
 - `model`: the default (or upgrade to Opus for complex sections — use judgment; Sonnet is fine for most)
 - `description`: "S<ID>: <short title>"
 - `prompt`:
   ```
-  Load and follow the `devk-section-tdd` skill via the Skill tool.
+  You are implementing one section of a plan with strict TDD. Follow these instructions exactly:
 
-  The plan is at `.devk/plan.md`. Your section is **S<ID>**. Execute ONLY that section.
+  <<< paste the full content of references/subagents/section-tdd.md here >>>
 
-  Context you have:
-  - Spec: `.devk/spec.md`
-  - Requirements: `.devk/requirements.md`
-  - Plan: `.devk/plan.md` (read YOUR section fully)
+  Context:
+  - The plan is at .devk/plan.md. Your section is S<ID>. Execute ONLY that section.
+  - Spec: .devk/spec.md
+  - Requirements: .devk/requirements.md
   - Material decisions (carried forward): <paste them here from the plan>
   - Prior completed sections: <list IDs or "none yet">
 
@@ -94,6 +102,8 @@ Before proceeding to review, do a quick sanity check yourself:
 
 ### 4. Dispatch per-section review
 
+Before the first review dispatch, read `references/subagents/reviewing-section.md` once into working memory. Reuse it across every review dispatch.
+
 For each completed section (or each of a parallel group), spawn a reviewer:
 
 - `subagent_type`: `"general-purpose"`
@@ -101,11 +111,14 @@ For each completed section (or each of a parallel group), spawn a reviewer:
 - `description`: "Review S<ID>"
 - `prompt`:
   ```
-  Load and follow the `devk-reviewing-section` skill via the Skill tool.
+  You are reviewing a single section's diff. Follow these instructions exactly:
 
-  Section reviewed: S<ID> from `.devk/plan.md`.
-  The section's changes are in the current working tree (git diff against the last known-good point will show what changed).
-  Return the structured findings the skill specifies.
+  <<< paste the full content of references/subagents/reviewing-section.md here >>>
+
+  Context:
+  - Section reviewed: S<ID> from .devk/plan.md.
+  - The section's changes are in the current working tree (git diff against the last known-good point will show what changed).
+  - Return the structured findings the instructions specify.
   ```
 
 Read the findings.
@@ -122,7 +135,7 @@ Read the findings.
 
 If a section can't be completed — tests won't pass after reasonable iteration, or the subagent reports it's stuck — **do NOT ship the failure**.
 
-Step 1: Spawn a debugging subagent running `devk-debugging` with the specific failure context. Give it the failing test, the section's goal, and what's been tried.
+Step 1: Spawn a debugging subagent. This is the one exception to the inlining pattern — `devk-debugging` stays a top-level skill (users also invoke it directly), so the subagent loads it via the Skill tool. Prompt: "Load and follow the `devk-debugging` skill via the Skill tool. Failing test: <…>. Section goal: <…>. What's been tried: <…>."
 
 Step 2: If debugging resolves it, continue. If debugging also fails to resolve, that's a replan signal (step 6).
 
@@ -189,7 +202,22 @@ Run through any concerns you deferred. Fix them. Commit: `devk: carry-forward fi
 
 ### 2. Final review
 
-Invoke `devk-final-review` via the Skill tool.
+Read `references/subagents/final-review.md` into working memory, then dispatch one subagent:
+
+- `subagent_type`: `"general-purpose"`
+- `model`: `"sonnet"` (or Opus for large changesets — use judgment)
+- `description`: "Final review"
+- `prompt`:
+  ```
+  You are doing a holistic end-of-work review. Follow these instructions exactly:
+
+  <<< paste the full content of references/subagents/final-review.md here >>>
+
+  Context:
+  - .devk/requirements.md, .devk/spec.md, .devk/plan.md have the intent.
+  - The changeset is the commit range from before execution started to HEAD.
+  - Return the structured report the instructions specify.
+  ```
 
 When it returns, **apply the same default as per-section reviews: fix confirmed improvements inline, don't file them as TODOs.**
 
@@ -251,5 +279,5 @@ Skip the commit step silently if not a git repo.
 - **Default to fixing confirmed improvements. Don't hand the user a TODO list when you could just do the thing.**
 - Human-facing voice is PM-friendly; technical artifacts stay technical.
 - Replan is a first-class outcome, not a failure.
-- `devk-final-review` is the next skill after all sections pass review.
+- Final review is the next step after all sections pass review (dispatch using `references/subagents/final-review.md`).
 - After final review: auto-fix, commit, then present wrap-up + `.devk/` cleanup offer.

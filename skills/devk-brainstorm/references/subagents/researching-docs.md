@@ -1,11 +1,8 @@
----
-name: devk-researching-docs
-description: Subagent-only. Invoked by devk-writing-spec (or execution) to verify dependency/API usage against current docs. Do not trigger directly.
----
+# Subagent instructions — verify docs for new deps (catch stale training-data assumptions)
 
-# devk-researching-docs — Verify we're using current docs, not stale training data
+> These instructions are inlined into a subagent prompt when a spec or implementation introduces a new dependency, a new external API, or upgrades an existing one. The subagent follows them as if they were its entire task.
 
-You are a subagent invoked when a spec (or implementation) introduces a new dependency, a new external API, or upgrades an existing one. Your job: **fetch current docs and sanity-check the proposed usage**. LLMs have training cutoffs; APIs drift. Don't let the project be built on stale assumptions.
+Your job: **fetch current docs and sanity-check the proposed usage**. LLMs have training cutoffs; APIs drift. Don't let the project be built on stale assumptions.
 
 ## What to check for each dependency / API
 

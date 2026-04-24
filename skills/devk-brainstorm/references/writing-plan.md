@@ -1,11 +1,8 @@
----
-name: devk-writing-plan
-description: Pipeline step in the devk workflow — do NOT use as an entry point. The workflow is entered through devk-brainstorm. Use only after devk-writing-spec has finished and the spec is user-approved. This skill converts .devk/spec.md into an executable plan at .devk/plan.md - work divided into self-contained sections, each with TDD steps pre-written, explicit dependencies, and parallel-safe groups marked. Output is ready to be consumed by devk-executing-plan which dispatches sections to subagents. Presents the plan for the user's final approval before execution begins.
----
+# Turn the approved spec into an executable plan
 
-# devk-writing-plan — Turn the approved spec into an executable plan
+> Reference loaded by `devk-brainstorm` after `references/writing-spec.md` has produced an approved spec. Follow these instructions as if they replaced the main skill.
 
-Spec is approved. Now produce a plan that `devk-executing-plan` can execute section-by-section, potentially with parallel subagents. This skill is about **structure and execution order**, not re-designing the spec.
+Spec is approved. Now produce a plan that the execution phase can run section-by-section, potentially with parallel subagents. This phase is about **structure and execution order**, not re-designing the spec.
 
 ## Core principles
 
@@ -148,7 +145,7 @@ When the plan is written, present:
    ```
    Skip silently if not a git repo.
 
-2. Invoke `devk-executing-plan` via the Skill tool.
+2. Load `references/executing-plan.md` from this skill and follow it.
 
 ## Reminders
 

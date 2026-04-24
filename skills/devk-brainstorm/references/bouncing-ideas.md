@@ -1,14 +1,13 @@
----
-name: devk-bouncing-ideas
-description: Use when the user wants high-level direction-finding with absolutely NO implementation. Triggered from devk-brainstorm path (a), or directly when the user says things like "just bouncing ideas", "let's think through", "no code yet", "what should I put on", "how should I approach", "what's the best way to", "help me decide", "brainstorm with me". This is strictly exploration mode - no code, no files, no specs. Just helping the human form a view on a problem through opinionated options and tradeoffs.
----
+# Bouncing ideas — direction finding, no code
 
-# devk-bouncing-ideas — Direction finding, no code
+> Reference loaded by `devk-brainstorm` when the user picks path (a), or when they're clearly just bouncing ideas. Follow these instructions as if they replaced the main skill.
 
 **HARD RULE: NO IMPLEMENTATION.** You do not write code. You do not edit files. You do not create files (except the optional summary at the end, with explicit user approval). You do not draft specs. You do not list concrete file paths, variable names, or class structures unless the human already did.
 
 If the human asks for code while in this mode, respond:
-> "We're in bouncing-ideas mode right now. Want me to switch to implementing? I can hand off to `/devk-implementing` which clarifies requirements before any code gets written."
+> "We're in bouncing-ideas mode right now. Want me to switch to implementing? I can pick up the requirements-clarification flow instead, which pins down what to build before any code gets written."
+
+(If they say yes, load `references/implementing.md` from this skill and follow it.)
 
 ## Philosophy
 
@@ -76,7 +75,7 @@ Then write a summary in this shape:
 > - [thing + why deferred]
 >
 > **Suggested next step:**
-> - [e.g., "When ready to build, invoke /devk-implementing and we'll clarify requirements"]
+> - [e.g., "When you're ready to build, say the word and I'll switch into implementation mode — we'll clarify requirements first before any code"]
 
 After showing the summary, ask once:
 > "Want me to save this to `.devk/notes/<short-topic-name>.md`? (gitignored, for future reference)"
@@ -99,4 +98,4 @@ If yes: create `.devk/` if needed, add `.devk/` to `.gitignore` if it exists and
 - One question at a time. One. Uno.
 - Stay at the human's level of abstraction.
 - Your opinions are welcome; your code is not (in this mode).
-- The human will invoke `/devk-implementing` later when they want to build. Don't rush them there.
+- The human will signal later when they want to build. Don't rush them there.

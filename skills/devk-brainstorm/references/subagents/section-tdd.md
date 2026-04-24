@@ -1,11 +1,8 @@
----
-name: devk-section-tdd
-description: Subagent-only. Invoked by devk-executing-plan to implement one plan section with strict TDD. Do not trigger directly.
----
+# Subagent instructions — implement one section with strict TDD
 
-# devk-section-tdd — Implement one section, TDD discipline
+> These instructions are inlined into a subagent prompt by the execution orchestrator. The subagent follows them as if they were its entire task.
 
-You are a subagent with a single job: implement ONE section from `.devk/plan.md` using TDD. You are not orchestrating anything. You are not doing the whole feature. Just your section.
+Your single job: implement ONE section from `.devk/plan.md` using TDD. You are not orchestrating anything. You are not doing the whole feature. Just your section.
 
 ## Core principles
 

@@ -1,15 +1,12 @@
----
-name: devk-implementing
-description: Pipeline step in the devk workflow — prefer entering through devk-brainstorm. Use when the user is ready to implement something real - features, bug fixes, refactors, integrations. Triggered from devk-brainstorm path (b), or directly when the user says "let's build", "let's implement", "add feature", "fix bug", "refactor", "wire up X". This is the requirements-clarification phase - no code gets written here. You ask one question at a time to pin down requirements, then hand off to devk-writing-spec. Prefer this over jumping straight to code; skipping clarification leads to rework.
----
+# Implementing — clarify requirements before any spec or code
 
-# devk-implementing — Clarify requirements before any spec or code
+> Reference loaded by `devk-brainstorm` when the user picks path (b), or when they ask to build/implement/fix/refactor. Follow these instructions as if they replaced the main skill.
 
-You are building real software. Before writing any spec or code, you must have a complete picture of what success looks like. This skill is ONLY for requirements clarification. You will NOT write specs, plans, or code here — that's for the skills downstream.
+You are building real software. Before writing any spec or code, you must have a complete picture of what success looks like. This phase is ONLY for requirements clarification. You will NOT write specs, plans, or code here — that's for the downstream reference files.
 
 ## Step 0: State hygiene backstop
 
-If this skill was invoked directly (not routed through `devk-brainstorm`), there may be leftover `.devk/` state from a prior session. Before asking any clarification question, check for:
+If this phase was loaded without `devk-brainstorm` running its state-hygiene check first, there may be leftover `.devk/` state from a prior session. Before asking any clarification question, check for:
 
 - `.devk/requirements.md`, `.devk/spec.md`, `.devk/plan.md`, `.devk/progress.md`
 
@@ -23,7 +20,7 @@ If any are present AND the current user message is clearly about a *different* f
 > **b) Archive and start fresh** — move prior `.devk/*.md` to `.devk/archive/<YYYY-MM-DD>-<slug>/`.
 > **c) Discard** — delete prior in-flight files (destructive; I'll confirm).
 
-Act on the answer the same way `devk-brainstorm` does (route to the furthest-along downstream skill for (a); archive+commit for (b); show-and-confirm for (c)). Then continue with clarification if the user chose (b) or (c).
+Act on the answer the same way `devk-brainstorm` does: for (a) route to the furthest-along downstream reference (`requirements.md` only → continue here; `spec.md` present → load `references/writing-plan.md`; `plan.md` present → load `references/executing-plan.md`). For (b) archive+commit. For (c) show-and-confirm delete. Then continue with clarification if the user chose (b) or (c).
 
 If the state clearly matches the current request, just continue — don't make it a ceremony.
 
@@ -148,13 +145,13 @@ When you can confidently answer all 8 items above, present the summary and reque
 >
 > ---
 >
-> This is the approval gate before I write the spec. Please confirm this captures it, or flag what's missing / wrong. Once you approve, I'll hand off to `devk-writing-spec`.
+> This is the approval gate before I write the spec. Please confirm this captures it, or flag what's missing / wrong. Once you approve, I'll move into spec-writing.
 
-**Wait for explicit approval.** Do NOT auto-advance. If the human says "looks good" or "yes" or "approved" or similar, then invoke `devk-writing-spec` via the Skill tool. If they flag gaps, go back to the loop with targeted questions.
+**Wait for explicit approval.** Do NOT auto-advance. If the human says "looks good" or "yes" or "approved" or similar, then load `references/writing-spec.md` from this skill and follow it. If they flag gaps, go back to the loop with targeted questions.
 
 ## Saving the summary
 
-Before invoking `devk-writing-spec`, save the approved summary to `.devk/requirements.md` so downstream skills have a durable reference:
+Before moving into spec-writing, save the approved summary to `.devk/requirements.md` so downstream steps have a durable reference:
 - Create `.devk/` if it doesn't exist
 - If a `.gitignore` exists and doesn't already exclude `.devk/`, add `.devk/` to it (one line, at the end)
 - Write the summary to `.devk/requirements.md`
@@ -188,7 +185,7 @@ If nothing has been written to `.devk/` yet, skip the offer entirely — nothing
 - Stacking questions. Not even "and also quickly — ...". One per turn.
 - Asking about implementation choices (libraries, patterns, file layout).
 - Restating the full summary every turn — summary is for the END only.
-- Auto-advancing to `devk-writing-spec` without explicit approval.
+- Auto-advancing to spec-writing without explicit approval.
 - Writing code, drafting a spec, or listing a plan here.
 - Drowning the human in detail. Keep context lines tight (1-2 sentences).
 - Asking "any other requirements?" as the exit — you should know if you've covered it. Exit with a concrete summary and let them pushback.
@@ -197,6 +194,6 @@ If nothing has been written to `.devk/` yet, skip the offer entirely — nothing
 
 - One question per turn.
 - Human owns WHAT, you own HOW.
-- No code, no spec, no plan in this skill.
+- No code, no spec, no plan in this phase.
 - Approval gate is explicit and required.
-- Downstream: `devk-writing-spec` takes the baton.
+- Downstream: `references/writing-spec.md` takes the baton.

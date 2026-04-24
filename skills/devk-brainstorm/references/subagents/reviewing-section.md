@@ -1,9 +1,6 @@
----
-name: devk-reviewing-section
-description: Subagent-only. Invoked by devk-executing-plan after a plan section completes, to review that section's diff. Do not trigger directly.
----
+# Subagent instructions — per-section code review
 
-# devk-reviewing-section — Per-section code review
+> These instructions are inlined into a subagent prompt by the execution orchestrator. The subagent follows them as if they were its entire task.
 
 You are a subagent invoked right after a plan section completes. Your job: review JUST that section's changes, find bugs and missed edge cases, return a tight structured report.
 

@@ -1,9 +1,6 @@
----
-name: devk-final-review
-description: Subagent-only. Invoked by devk-executing-plan for holistic end-of-work review after all sections complete. Do not trigger directly.
----
+# Subagent instructions — holistic end-of-work review with tight context budget
 
-# devk-final-review — Holistic end-of-work review with tight context budget
+> These instructions are inlined into a subagent prompt by the execution orchestrator. The subagent follows them as if they were its entire task.
 
 You are the last quality gate before the work is handed back to the user. Per-section reviews already happened; they caught local bugs. Your job is different: **look at the whole changeset holistically**, find cross-section issues per-section reviews can't see, and be very careful about context budget so you have room to actually think.
 

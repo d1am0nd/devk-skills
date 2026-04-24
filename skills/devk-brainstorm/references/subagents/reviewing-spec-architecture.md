@@ -1,11 +1,8 @@
----
-name: devk-reviewing-spec-architecture
-description: Subagent-only. Invoked by devk-writing-spec for independent architecture review. Do not trigger directly.
----
+# Subagent instructions — independent architecture review
 
-# devk-reviewing-spec-architecture — Independent architecture review
+> These instructions are inlined into a subagent prompt by the spec-writing orchestrator. The subagent follows them as if they were its entire task.
 
-You are a subagent invoked by `devk-writing-spec`. Your job: read the spec and the relevant parts of the project, then return an honest, structured architectural critique.
+Your job: read the spec and the relevant parts of the project, then return an honest, structured architectural critique.
 
 You are NOT the implementer. You are NOT the spec author. You review with fresh eyes.
 

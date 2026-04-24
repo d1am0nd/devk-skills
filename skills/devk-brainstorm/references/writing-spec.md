@@ -1,9 +1,6 @@
----
-name: devk-writing-spec
-description: Pipeline step in the devk workflow — do NOT use as an entry point. The workflow is entered through devk-brainstorm. Use only after devk-implementing has finished clarifying requirements and the user has approved the summary (or when requirements already exist in .devk/requirements.md). This skill writes the actual spec (.devk/spec.md), runs it through parallel subagent review (architecture + code quality + optional docs research), incorporates fixes, and presents the final spec to the user for approval before plan-writing.
----
+# Writing the spec and running it through review
 
-# devk-writing-spec — Write the spec and run it through review
+> Reference loaded by `devk-brainstorm` after `references/implementing.md` has produced an approved requirements summary (or directly if `.devk/requirements.md` already exists). Follow these instructions as if they replaced the main skill.
 
 You have approved requirements (in conversation memory and/or `.devk/requirements.md`). Now you write the technical spec, get it reviewed by independent subagents, incorporate the findings, and present it to the human for the second approval gate.
 
@@ -18,7 +15,7 @@ You have approved requirements (in conversation memory and/or `.devk/requirement
 ## Step 1: Read requirements and survey
 
 - Read `.devk/requirements.md` if it exists. If not, requirements are in conversation context.
-- If you don't already have a project survey in context (from `devk-brainstorm`), briefly scan the relevant parts of the project yourself (Grep/Glob/Read the parts of the codebase the spec touches). Don't re-survey the whole project; focus on what this feature interacts with.
+- If you don't already have a project survey in context (from the brainstorm entry step), briefly scan the relevant parts of the project yourself (Grep/Glob/Read the parts of the codebase the spec touches). Don't re-survey the whole project; focus on what this feature interacts with.
 
 ## Step 2: Draft the spec
 
@@ -75,26 +72,39 @@ Do NOT:
 
 ## Step 3: Run parallel review
 
-Spawn subagents in parallel (single message, multiple Agent tool calls):
+Subagents in the devk workflow don't load skills themselves — they follow instructions inlined into their prompts. Before dispatching, read the three subagent reference files you'll need:
+
+- `references/subagents/reviewing-spec-architecture.md`
+- `references/subagents/reviewing-spec-quality.md`
+- `references/subagents/researching-docs.md` (only if needed — see below)
+
+Then spawn subagents in parallel (single message, multiple Agent tool calls). Each prompt inlines the content of its reference file.
 
 **Reviewer 1 — Architecture** (always runs):
 - `subagent_type`: `"general-purpose"`
 - `model`: `"sonnet"`
 - `description`: "Architecture review of spec"
-- `prompt`: "Load and follow the `devk-reviewing-spec-architecture` skill via the Skill tool. The spec to review is at `.devk/spec.md`. Project is at the current working directory. Return findings in the structured format the skill specifies."
+- `prompt`:
+  ```
+  You are reviewing a technical spec. Follow these instructions exactly:
+
+  <<< paste the full content of references/subagents/reviewing-spec-architecture.md here >>>
+
+  Context:
+  - Spec to review: .devk/spec.md
+  - Project is at the current working directory
+  - Return findings in the structured format the instructions specify.
+  ```
 
 **Reviewer 2 — Quality** (always runs):
-- `subagent_type`: `"general-purpose"`
-- `model`: `"sonnet"`
+- Same dispatch pattern, inlining `references/subagents/reviewing-spec-quality.md`.
 - `description`: "Quality review of spec"
-- `prompt`: "Load and follow the `devk-reviewing-spec-quality` skill via the Skill tool. The spec to review is at `.devk/spec.md`. Return findings in the structured format the skill specifies."
 
 **Reviewer 3 — Docs research** (conditional):
 Run ONLY if the spec introduces a new package/dep or depends on a specific external API whose current behavior matters. Skip if the spec only uses things already in the project.
-- `subagent_type`: `"general-purpose"`
-- `model`: `"sonnet"`
+- Same dispatch pattern, inlining `references/subagents/researching-docs.md`.
 - `description`: "Verify docs for new deps"
-- `prompt`: "Load and follow the `devk-researching-docs` skill via the Skill tool. Spec at `.devk/spec.md`. Focus on these new/upgraded dependencies: [list them with proposed versions]. Return the structured report the skill specifies."
+- In the Context block, add the list of new/upgraded dependencies to focus on.
 
 ## Step 4: Read reviews, classify, act
 
@@ -142,7 +152,7 @@ Format:
    ```
    If it's not a git repo, skip silently.
 
-2. Invoke `devk-writing-plan` via the Skill tool.
+2. Load `references/writing-plan.md` from this skill and follow it.
 
 ## When to escalate rather than fix
 
