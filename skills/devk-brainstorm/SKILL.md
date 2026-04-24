@@ -29,9 +29,9 @@ references/
 ├── writing-spec.md         # next — draft the technical spec, run reviews
 ├── writing-plan.md         # next — break the spec into executable sections
 ├── executing-plan.md       # next — dispatch, review, auto-fix, wrap up
+├── reviewing-section.md    # checklist main agent follows for per-section review
 └── subagents/              # instructions to inline into subagent prompts
     ├── section-tdd.md
-    ├── reviewing-section.md
     ├── final-review.md
     ├── reviewing-spec-architecture.md
     ├── reviewing-spec-quality.md

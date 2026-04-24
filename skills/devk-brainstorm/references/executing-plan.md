@@ -6,12 +6,13 @@ The plan is approved. Execute it section by section (with parallelism where the 
 
 ## How subagent dispatch works here
 
-This phase spawns several kinds of subagent — section implementers, section reviewers, a debugging helper, and a final-review agent. Subagents do NOT load skills themselves. You read the relevant subagent reference file and **inline its content into the subagent's prompt**. That pattern repeats for every dispatch in this document. The reference files live at:
+This phase spawns several kinds of subagent — section implementers, a debugging helper, and a final-review agent. Subagents do NOT load skills themselves. You read the relevant subagent reference file and **inline its content into the subagent's prompt**. That pattern repeats for every dispatch in this document. The reference files live at:
 
 - `references/subagents/section-tdd.md` — for implementing a single section (used per section)
-- `references/subagents/reviewing-section.md` — for per-section review (used per section)
 - `references/subagents/final-review.md` — for the end-of-work holistic review (used once)
 - `references/subagents/researching-docs.md` — for dep/API verification (used if a new dep appears mid-execution)
+
+Per-section review is NOT a subagent — you (the main agent) run it yourself using `references/reviewing-section.md` as a checklist. See step 4 of the main loop.
 
 `devk-debugging` stays as a top-level skill (users also invoke it directly). When you need it, instruct the subagent to load it via the Skill tool — that's an exception to the inlining pattern for this one skill.
 
@@ -20,7 +21,7 @@ This phase spawns several kinds of subagent — section implementers, section re
 - **Quality over speed. No hacks. Project lives for years.** If a section can't be completed properly, you pause and reassess — you do NOT hand-wave past a failure.
 - **One subagent per section.** Fresh context for each. Subagents follow the inlined contents of `references/subagents/section-tdd.md`.
 - **Parallel groups run in parallel**, in a single message with multiple Agent tool calls. Sequential sections run one after the other.
-- **Per-section review is mandatory**, not optional. Each completed section → reviewer subagent (inlining `references/subagents/reviewing-section.md`) before the next starts (or the next group starts).
+- **Per-section review is mandatory**, not optional. After each completed section (or each of a parallel group), you run the review yourself per `references/reviewing-section.md` before the next section starts. No subagent — you already have the plan/spec context.
 - **Each section commits independently** once it passes review. This gives a clean, bisect-friendly history and lets the human inspect any checkpoint.
 - **Replan is always on the table.** If execution reveals the plan is wrong, stop and loop in the human with options.
 
@@ -103,36 +104,29 @@ Before proceeding to review, do a quick sanity check yourself:
 - Run the project's test suite (or at least the tests the section added) and confirm they pass.
 - If tests don't pass, the section is NOT done. Go to step 5 (stuck handling).
 
-### 4. Dispatch per-section review
+### 4. Run the per-section review (in this agent)
 
-Before the first review dispatch, read `references/subagents/reviewing-section.md` once into working memory. Reuse it across every review dispatch.
+Read `references/reviewing-section.md` once into working memory on the first pass — it's the checklist you'll apply to every section. Subsequent sections can lean on what you've internalized, but glance back if your read starts feeling thin.
 
-For each completed section (or each of a parallel group), spawn a reviewer:
+For each completed section (or each of a parallel group), run the review yourself against that section's diff:
 
-- `subagent_type`: `"general-purpose"`
-- `model`: `"sonnet"`
-- `description`: "Review S<ID>"
-- `prompt`:
-  ```
-  You are reviewing a single section's diff. Follow these instructions exactly:
+1. `git diff HEAD` (and `git status` for new files) to see the section's changes.
+2. Re-read the section's entry in `.devk/plan.md` — the acceptance criteria define "done."
+3. Read the changed files fully.
+4. Apply the checklist in `references/reviewing-section.md` — what you're looking for, severity rubric, hidden-hack watchlist, what NOT to flag.
+5. Form your findings mentally in the shape the checklist describes (Summary / Blockers / Concerns / Nits). No need to write them out as a document — they flow straight into action below.
 
-  <<< paste the full content of references/subagents/reviewing-section.md here >>>
-
-  Context:
-  - Section reviewed: S<ID> from .devk/plan.md.
-  - The section's changes are in the current working tree (git diff against the last known-good point will show what changed).
-  - Return the structured findings the instructions specify.
-  ```
-
-Read the findings.
+Stay tight. Don't wander into unrelated files or re-review the whole project.
 
 **Default stance: if a finding is a confirmed improvement, fix it. Don't file it as a TODO for the user.** The user expects you to own quality. Handing back a list of "things I noticed but didn't do" is not the job.
 
-**Blocker findings:** must be fixed before proceeding. You fix them in the main agent OR dispatch a small fix subagent. Re-verify tests. Do NOT start the next section until blockers are cleared.
+**Blocker findings:** must be fixed before proceeding. Fix them here in the main agent, or dispatch a small fix subagent if the scope benefits from fresh context. Re-verify tests. Do NOT start the next section until blockers are cleared.
 
 **Concern findings:** *default to fixing them now*. If the fix is clearly a win (tightens a contract, plugs an edge case, removes a hack, simplifies code) — do it as part of this section. If fixing would materially expand scope (separate refactor, new dependency, a day of work), *then* add to `.devk/progress.md` under "carry-forward concerns" and handle in the dedicated fix pass before final review. Escalate to the user only when the fix is ambiguous — when there's a real judgment call about whether it's an improvement at all.
 
 **Nit findings:** fix anything that's a one-liner quality bump. Drop the rest silently.
+
+**Output discipline:** run the review silently. The user gets the one-line "✓ <section> done" after you've reviewed, fixed, and committed — not a review transcript.
 
 ### 5. Stuck handling (a section fails or spins)
 
