@@ -5,20 +5,14 @@ description: Interactive, human-in-the-loop code review for a local changeset �
 
 # code-review — Interactive review of a local changeset
 
-You were triggered by a user who wants a careful review of a specific changeset on their local machine. Internalize this before doing anything:
-
-- **The changeset is ONE change.** Whatever the human points at — last 4 commits, branch vs main, staged hunks — review the cumulative diff as a single logical change. Never review commit-by-commit. Commit boundaries on a feature branch are usually checkpoint noise.
-- **Context discipline is the headline feature.** Diffs can be huge. Lockfiles and snapshot files alone can be tens of thousands of lines. You will be ruthless about what enters the main agent's context. The deep review is what subagents are for; the main agent stays clean.
-- **The human collaborates, especially up front.** Step 1 is *understanding what the change is for*. You confirm that intent with the human before doing anything else. Only after the intent is locked in do you fan out subagents for the actual review.
-- **Findings are reports, not fixes.** This skill never edits code. The human decides what to do with what you find. You are reviewing — for the human's own work or someone else's. Be objective either way.
-- **One question at a time. Always.** This applies to every clarifying step in this skill.
+You were triggered by a user who wants a careful review of a specific changeset on their local machine. The shape of the work: survey the diff under strict context discipline, form an intent hypothesis, **confirm that intent with the human before reviewing**, then fan out subagents for the deep review and report findings in chat. You never edit code — findings are reports. Full guardrails are in **Hard rules** at the bottom; read them.
 
 ## The flow
 
 ```
 [1] resolve scope  →  [2] survey  →  [3] read smart  →  [4] hypothesize intent
                                                           ↓
-                                    [5] confirm intent (Q&A, a/b/c)
+                                              [5] confirm intent
                                                           ↓
                                     [6] dispatch parallel review (sections + enforcer)
                                                           ↓
@@ -39,7 +33,7 @@ The user invokes this with something like:
 - "review this PR" → branch vs its base (ask which base if not obvious)
 - "/code-review <scope>" — explicit
 
-Translate the human's words into a single git revision range or set. If genuinely ambiguous, ask once with a/b/c options (see Step 5 format) before proceeding. Don't ask if you can read it from context.
+Translate the human's words into a single git revision range or set. **Never use the a/b/c format here** — that's reserved for intent in Step 5. If the scope feels ambiguous, pick the most likely interpretation, state it in one short line ("Reading this as `HEAD~1..HEAD` — say so if you meant something else"), and proceed. The human will redirect if you got it wrong. Only stop and ask a plain question if the scope is genuinely unresolvable from context (e.g. "review my branch" with no `main` or `master`).
 
 ## Step 2 — Survey before reading
 
@@ -64,42 +58,30 @@ Now read selectively. Read `references/selecting-diffs.md` and follow its rules 
 
 The whole point of step 3 is to spend the *minimum* main-context tokens needed to form an intent hypothesis. If you find yourself loading 10+ full diffs, stop — you've gone too deep.
 
-While reading, mentally note any spots that look fishy (a removed test with no obvious replacement, an exception swallow, a flipped condition that might be wrong, a new TODO). Don't review them yet. They become candidate questions for step 5.
+While reading, mentally note any spots that look fishy (a removed test with no obvious replacement, an exception swallow, a flipped condition that might be wrong, a new TODO). They become candidate follow-ups for step 5 — don't dig in now.
 
 ## Step 4 — Form an intent hypothesis
 
 In your head: state in 1–2 sentences what this change is for. What is the human (or the original author) trying to accomplish? Why does this code exist?
 
-If you can't write that sentence with reasonable confidence, you either need to read one or two more files (carefully — context budget) or just ask the human directly in step 5.
-
-You are NOT reviewing yet. You are forming a hypothesis.
+If you can't write that with reasonable confidence, read one or two more files carefully — or just ask in step 5.
 
 ## Step 5 — Confirm intent with the human
 
 Read `references/clarifying-intent.md` and follow its loop. Headlines:
 
-- One question per turn. Format is always a / b / c.
-- a) and b) are concrete answers you propose. c) is always "let me explain".
-- After each answer, *reconsider* what (if anything) you still need to ask. Most planned follow-ups become moot after the first answer.
-- Continue until intent is clear AND any specific suspicious spots you noticed have been clarified or noted.
-- Two questions is normal. Four is too many.
+- **Intent first, always.** Even on small commits — write down your read of the change's WHY (the problem, the motivation, what the change accomplishes) in a short prose paragraph and ask the human to confirm. This is the WHY of the *change*, not the review.
+- **Prose for intent, a/b/c only for follow-ups.** Follow-ups are for specific unclear spots: a suspicious file:line, a focal-area pick, a constraint.
+- **Stop when you have what you need.** Intent confirmed, any specific concerns clarified or noted. Don't fish for more.
 
-Exit this step with:
-
-- A clear, confirmed intent statement (one sentence).
-- A list of focal areas (files / modules / behaviors) the deep review must cover.
-- Optional: specific concerns the human flagged or asked you to investigate.
-
-Tell the human you're kicking off the review. One sentence. Then move on.
+Exit with: a confirmed intent statement, a list of focal areas for the deep review, and any specific concerns the human flagged. Then tell them you're kicking off — one sentence — and move on.
 
 ## Step 6 — Dispatch the review
 
 Read `references/dispatching-review.md` and follow it to slice the diff into sections and fan out subagents in parallel (single message, multiple Agent calls). Two roles:
 
-- **Section reviewer** — owns one slice of the diff. Reads the slice fully + reads relevant existing code one level deeper (callers, callees, neighbors). Inline `references/subagents/section-reviewer.md` into the prompt.
+- **Section reviewer** — owns one slice of the diff. Reads the slice fully *and* reads the surrounding code one level deeper (callers, callees, neighbors) — that's where the sneaky bugs hide. A change to `parseAuthHeader` is reviewed alongside its callers and what it calls. Inline `references/subagents/section-reviewer.md` into the prompt.
 - **Standards enforcer** — checks the changeset against the project's standards (CLAUDE.md, AGENTS.md, lint configs, neighbor patterns). One per changeset, not per section. Inline `references/subagents/standards-enforcer.md`.
-
-The "one level deeper" rule for section reviewers is the whole point. A change to `parseAuthHeader` is reviewed alongside its callers and what `parseAuthHeader` itself calls. Sneaky bugs hide in those seams.
 
 ## Step 7 — Consolidate and present
 
