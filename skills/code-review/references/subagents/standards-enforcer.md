@@ -37,6 +37,12 @@ Your single job: check whether the changeset abides by the project's standards. 
 - Don't invent standards. If something isn't documented and isn't visible in neighbor code, it's not a standard. Personal taste isn't a standard.
 - Don't flag style preferences as violations unless you have evidence they're project policy.
 
+## Calibrating — drop the low-confidence stuff
+
+For each candidate finding, ask: *would you raise this in a real PR review with a senior colleague?* If no — drop it. The standards check is for things that would actually matter in code review, not for every micro-deviation.
+
+Confidence test: if you're <70% sure the rule applies or is being broken, drop it. Drift findings inferred from neighbor patterns are especially noisy — only flag drift when the pattern is consistent across multiple neighbors, not when one file happens to do it differently.
+
 ## Output format
 
 ```
@@ -49,9 +55,9 @@ Your single job: check whether the changeset abides by the project's standards. 
 
 Severity:
 
-- **Violation** — explicit, documented rule broken (CLAUDE.md says X, code does !X).
-- **Drift** — visible-in-neighbors convention not followed; likely accidental, easy to fix.
-- **Note** — minor consistency item; include only the ones that are clearly worth a one-line change.
+- **Violation** — explicit, documented rule broken (CLAUDE.md says X, code does !X). High confidence.
+- **Drift** — visible-in-neighbors convention not followed; flag only when the pattern is consistent across multiple neighbors.
+- **Note** — minor consistency item; include sparingly — only the ones that are obvious one-line wins.
 
 If the project has no documented standards and the diff matches neighbor patterns, say so plainly:
 

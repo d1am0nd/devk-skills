@@ -1,6 +1,6 @@
 # Synthesizing findings
 
-Subagents have returned. Now you produce the human-facing report. It goes in chat only — never to a file unless the human asks.
+You've completed the mid-review check-in (step 7) and either got a green light or a small redirect. Now produce the polished human-facing report. It goes in chat only — never to a file unless the human asks.
 
 ## Aggregate
 
@@ -8,6 +8,12 @@ Subagents have returned. Now you produce the human-facing report. It goes in cha
 - **Deduplicate.** If two subagents flagged the same `file:line` (e.g., a section reviewer saw a logic bug *and* the standards enforcer flagged the surrounding style), merge into one finding. Keep the most informative framing — usually the bug framing wins over the style framing.
 - **Cross-check.** If Section A's reviewer flagged something that depends on a caller in Section B (or in untouched code), confirm Section B's reviewer (or a quick grep you do yourself) doesn't already explain it away. Don't surface a finding that's already neutralized elsewhere.
 - **Drop out-of-scope findings.** If the human's intent statement explicitly puts something out of scope (e.g., "I'm not worried about perf here"), drop perf findings unless they cross into correctness.
+
+## Filter — drop the low-confidence stuff
+
+Apply the same test the subagents should have applied: *would you raise this in a real PR review with a senior colleague?* If no — drop it. If a finding came back from a subagent and you can't articulate why a senior reviewer would care, it doesn't go in the report.
+
+Confidence threshold: <70% confidence → drop, don't downgrade. Low-confidence findings clutter the report and erode trust in the rest of it. Better a tight report with three real issues than a sprawling one with three real issues buried in twelve maybes.
 
 ## Rank
 
@@ -24,39 +30,45 @@ Sort findings in this order:
 Keep it tight. Follow this exact shape in chat:
 
 ```markdown
-## Code review — <scope description, e.g. "last 4 commits" or "feat-auth vs main">
+## Code review — <scope, e.g. "last 4 commits" or "feat-auth vs main">
 
+**Verdict:** <one line — e.g. "Two blockers to fix." or "Clean.">
 **Intent:** <one sentence, the confirmed intent>
 
-### Blockers
-- **<title>** — <one sentence>. `<file:line>`
-  Suggested: <one sentence>
+### Blockers (N)
+- `file:line` — **<title>**. <one sentence on what's wrong>. → <fix in one phrase>
 
-### Concerns
-- **<title>** — <one sentence>. `<file:line>`
-  Suggested: <one sentence>
+### Concerns (N)
+- `file:line` — **<title>**. <one sentence>. → <fix in one phrase>
 
-### Standards
-- **<title>** — <one sentence>. `<file:line>` (rule: <source>)
+### Standards (N)
+- `file:line` — **<title>** (rule: <source>). → <fix>
 
 ### Nits
-- <one-liner>. `<file:line>`
+<N nits — say if you want them listed>
 
-### What I looked at
-- <N> files reviewed across <M> sections; standards check covered <X>.
-- Skipped: <e.g. lockfile, generated migration, snapshot fixtures — list briefly>.
-
-### Verdict
-<one line — e.g. "Two blockers to fix." or "Clean — nothing significant to flag.">
+---
+*Reviewed N files across M sections. Skipped: <one-liner, only if anything substantive was skipped>.*
 ```
+
+Format rules:
+
+- **Verdict at the top, then intent.** Human sees the shape immediately.
+- **Counts in section headers.** `### Blockers (2)` lets the human size each list before reading.
+- **`file:line` first, title second.** Humans navigate by path; the title is secondary.
+- **Drop empty sections entirely.** No "Standards: none." If there are no Blockers, the section doesn't exist.
+- **Nits are collapsed by default.** Show the count in the section, not the list. Human can ask to expand. If there are zero nits, drop the section.
+- **Footer is one italic line** with files reviewed and anything substantive skipped (lockfiles don't count as substantive — don't list them).
+- **No "recommendations" section.** Suggested fixes go inline with each finding via `→`.
 
 ## Don'ts
 
 - Don't paste full subagent outputs into the report.
-- Don't invent severities to fill empty sections — drop empty sections entirely. A report with only Concerns and a Verdict is fine.
-- Don't add a separate "recommendations" section. Suggested fixes go inline with each finding; the human doesn't need a second list.
+- Don't invent severities to fill empty sections — drop empty sections. A report with only Concerns is fine.
+- Don't include findings that wouldn't survive the *real-PR-with-a-senior-colleague* test. The filter step is mandatory, not optional.
+- Don't list nits inline by default. Footer count only; expand on request.
 - Don't write to a file. Chat only, unless the human asks.
-- Don't summarize what you just did at the end ("I reviewed X and found Y!"). The report is the summary.
+- Don't summarize what you just did at the end. The report is the summary.
 
 ## When findings are sparse
 
@@ -65,9 +77,10 @@ If everything came back clean:
 ```markdown
 ## Code review — <scope>
 
+**Verdict:** Clean.
 **Intent:** <sentence>
 
-Nothing significant to flag. Reviewed <N> files across <M> sections. Standards check passed.
+*Reviewed N files across M sections. Standards check passed.*
 
 If you want me to dig deeper on a specific spot, say which.
 ```
@@ -76,8 +89,8 @@ That's the whole report. No padding.
 
 ## When findings are dense
 
-If you have 15+ real findings, the change is either large or genuinely problematic. Either way:
+If you have 15+ real findings (after the filter step), the change is either large or genuinely problematic. Either way:
 
-- Cap each section at the top ~6 entries; mention the rest as a count ("plus 4 more nits — let me know if you want them listed").
-- Lead with the verdict so the human knows the shape before reading details.
-- Don't try to soften the report. A bad change deserves a clear "this needs work before merging".
+- Cap each section at the top ~6 entries; mention the rest as a count ("plus 4 more concerns — say if you want them listed").
+- The verdict at the top should reflect the shape ("Several blockers; this needs work before merging.").
+- Don't try to soften the report. A bad change deserves a clear assessment.

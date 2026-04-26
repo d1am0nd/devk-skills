@@ -55,15 +55,28 @@ Tests usually don't reveal intent better than the code they test. Use the grep a
 
 Stop reading when you can write a 1–2 sentence intent statement that explains *what the change does* and *why* with reasonable confidence. Beyond that, more reading is wasted context — questions to the human in step 5 are cheaper.
 
-## Red flags to remember
+## Track suspicions as you read
 
-While selecting and reading, you'll spot things that look fishy. Don't review yet — just remember them. They become candidate questions in step 5 if reading more diff doesn't resolve them. Examples:
+Spotted something fishy? Don't review yet — log it in a small structured list:
+
+```
+- src/api/auth.ts:42 — exception swallow with no logging
+- internal/db/migration.sql — adds column, didn't see code that uses it
+- pkg/router/route.go:117 — signature change, no caller updates in the diff
+```
+
+This list has two downstream uses:
+
+1. The unresolved entries become candidate follow-ups for the human in step 5.
+2. The still-unresolved-after-step-5 entries get handed to the relevant section reviewer in step 6 — framed as *"investigate or rule out"*. The point: subagents shouldn't have to re-derive what you already noticed in step 3.
+
+Common things worth logging:
 
 - A removed test with no obvious replacement.
 - A new `TODO` / `FIXME` committed.
 - An exception handler that swallows errors silently.
 - A condition that looks flipped or backwards.
 - A new dependency added without an obvious use site in the same diff.
-- A schema/migration change without a corresponding code change touching the new column/field.
+- A schema/migration change without corresponding code touching the new column/field.
 - A function signature changed in one place without obvious caller updates in the same diff.
 - Authentication / authorization / crypto code touched.

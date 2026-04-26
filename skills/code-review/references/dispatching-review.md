@@ -30,6 +30,7 @@ Dispatch all of these in parallel — single message, multiple Agent tool calls.
   - The confirmed intent statement (1–2 sentences).
   - The list of files in this section.
   - Any specific concerns the human flagged for this area (from step 5).
+  - **The main agent's noted suspicions for files in this slice** (from step 3 — `file:line — one-liner` entries). Frame as *"investigate or rule out"*, not as confirmed findings.
   - The "look one level deeper" mandate (already in the role file, but reinforce it inline).
 
 ### Standards enforcer — one for the whole changeset
@@ -61,7 +62,8 @@ Every subagent prompt should contain, in this order:
 3. The confirmed intent.
 4. The slice of files this subagent owns (or the full file list, for the enforcer).
 5. Any specific concerns the human flagged (if relevant to this slice).
-6. A reminder that output goes back to the main agent in the format the role file specifies.
+6. The main agent's noted suspicions for files in this slice (section reviewers only — not the enforcer).
+7. A reminder that output goes back to the main agent in the format the role file specifies.
 
 ## Don't dispatch
 
@@ -74,4 +76,4 @@ Every subagent prompt should contain, in this order:
 
 While subagents run, do nothing else. Don't pre-read more diff "just in case" — it pollutes the context you'll need for synthesis. Wait for results.
 
-When all subagents have returned, read their outputs and proceed to step 7 (synthesizing-findings).
+When all subagents have returned, read their outputs and proceed to step 7 (mid-review check-in), then step 8 (synthesizing-findings).
