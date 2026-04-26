@@ -19,7 +19,7 @@ This lens cares about:
 
 This lens does NOT cover:
 - In-depth UI redesigns of this project's own UI — `ui` lens
-- Internal tech-debt — separate audit
+- Internal tech-debt — `tech-debt` lens
 
 ## Phase 1 — Scout
 

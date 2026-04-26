@@ -23,7 +23,7 @@ Trigger it with `/devk-brainstorm` (or `/devk-brainstorm <your idea>` to skip th
 
 ## lunch-break — go explore while I'm away
 
-You pick a lens (UI, copy, SEO, a11y, what-next, competitive, …), walk away, and come back to a written report of observations and ideas. The skill fans out subagents to cover ground in parallel, then writes a single report you can skim and cherry-pick from. No code changes — just ideas.
+You pick a lens (UI, copy, SEO, a11y, what-next, competitive, tech-debt, …), walk away, and come back to a written report of observations and ideas. The skill fans out subagents to cover ground in parallel, then writes a single report you can skim and cherry-pick from. No code changes — just ideas.
 
 Trigger it with `/lunch-break <lens>`, or `/lunch-break` on its own to see the available lenses. Natural-language openings like "go explore the copy for me" or "do a UI review while I'm out" also work.
 

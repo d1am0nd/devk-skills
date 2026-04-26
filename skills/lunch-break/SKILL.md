@@ -1,6 +1,6 @@
 ---
 name: lunch-break
-description: Autonomous, hands-off "go explore the project" mode. The user picks a lens (UI, copy, SEO, a11y, what-next, competitive, etc.), walks away, and comes back to a written report of ideas and observations. Liberally fans out subagents in two phases (scout then deep-dive). Use when the user says "lunch break", "go explore <X>", "do a <X> review", "go wild on <X>", "audit <X> while I'm away", "look at the project for me", or invokes /lunch-break explicitly. The user picks ONE lens per run. Available lenses are auto-discovered from references/. If no lens is given, list the lenses and ask which.
+description: Autonomous, hands-off "go explore the project" mode. The user picks a lens (UI, copy, SEO, a11y, what-next, competitive, tech-debt, etc.), walks away, and comes back to a written report of ideas and observations. Liberally fans out subagents in two phases (scout then deep-dive). Use when the user says "lunch break", "go explore <X>", "do a <X> review", "go wild on <X>", "audit <X> while I'm away", "look at the project for me", "audit tech debt", "what should we refactor", "what's rotting", "propose refactorings", or invokes /lunch-break explicitly. The user picks ONE lens per run. Available lenses are auto-discovered from references/. If no lens is given, list the lenses and ask which.
 ---
 
 # lunch-break — Autonomous, lens-driven project exploration
@@ -35,6 +35,7 @@ If no lens is given:
       - a11y        → accessibility audit (WCAG, semantics, contrast, keyboard, screen reader)
       - what-next   → brainstorm features (LLM-powered ok, no manual human work)
       - competitive → research what similar products do that we don't
+      - tech-debt   → high-confidence refactoring proposals (max 3, with test design)
     Which lens should I run?
     ```
 4. Wait for the user's pick. Picking the lens *is* the trigger — this is the only acceptable mid-trigger pause.
@@ -57,6 +58,13 @@ Read `references/<lens>.md` from this skill's directory. The reference defines:
 - **Phase 2 deep dive** — how to fan out based on scout results, with subagent prompt templates
 - **Finding shape** — what a useful observation looks like for this lens (each lens is shaped a little differently)
 
+A lens may also specify any of these optional pieces — apply them when present:
+
+- **Consolidate & rank** — an explicit ranking step in the main thread between scout and deep dive. Useful for high-stakes lenses where deep-diving the wrong items wastes the whole run. Even when the lens doesn't define one, give the scout output a few minutes of your own thought before fanning out — don't auto-pilot from scout to deep dive.
+- **Verification subagent** — a parallel "devil's advocate" that independently challenges a candidate finding before it earns deep-dive treatment. Lenses with high cost of being wrong (tech-debt, security) should use this.
+- **Per-finding shape extension** — extra sections on top of the default per-finding template (e.g. tech-debt adds Test design, Confidence, Evidence). Honor them.
+- **Model overrides** — a lens may pin a specific subagent role to `inherit` (parent's model) instead of `sonnet` when judgement matters more than cost. Honor them.
+
 Follow the reference. If something in the reference doesn't fit this specific project (e.g. the project has no frontend and the lens is `ui`), adapt — but say so honestly in the report. Don't fake findings to fill a section.
 
 ## Step 4 — Synthesize and write the report
@@ -74,8 +82,11 @@ Intensity: liberal | maximum
 Subagents dispatched: <n total> (scout: <s>, deep dive: <d>)
 Project: <project name from package.json / repo / cwd>
 
+**Verdict:** <one line — e.g. "3 findings worth attention", or "All clear: nothing significant to flag in this lens">
+
 ## TL;DR
 - 3–5 bullet headline findings, each one short
+- (If verdict is all-clear, say what you looked at and why nothing rose to the bar — don't pad with weak findings.)
 
 ## Findings
 ### <Title>
@@ -85,26 +96,29 @@ Project: <project name from package.json / repo / cwd>
 - **Suggested change:** concrete proposal (no full code unless a tiny snippet helps)
 - **Effort guess:** small / medium / large (rough, not load-bearing)
 
-(Repeat per finding. Order: highest-impact first.)
+(Repeat per finding. Order: highest-impact first. Lens references may add more sections per finding — honor them.)
 
 ## Stuff that didn't fit
-Loose threads, hunches that didn't pan out into full findings, things worth a follow-up lunch break.
+Loose threads, hunches that didn't pan out into full findings, things worth a follow-up lunch break. Lenses with a verification step may use this section to record candidates that were considered and rejected.
 
 ## What I looked at
 Brief — what areas/files/dirs the subagents covered, and what was deliberately out of scope.
 ```
 
-After writing the report, post a short summary in the chat: the same TL;DR bullets plus the path to the full report. Do not paste the full report into chat.
+After writing the report, post a short summary in the chat: the verdict line, the TL;DR bullets, and the path to the full report. Do not paste the full report into chat.
 
 ## Subagent model selection
 
-Use the `model` parameter on `Agent` calls:
+Use the `model` parameter on `Agent` calls. Default table:
 
 | Subagent role | Model | Why |
 |---|---|---|
 | Phase 1 — scout | `sonnet` | Broad mapping, low judgement |
 | Phase 2 — deep dive | `sonnet` | Many parallel, pattern-spotting |
+| Verification / devil's advocate | inherit (omit `model`) | When a lens uses one, it's the quality gate — give it the parent's full reasoning power |
 | Final synthesis (you) | inherit (omit) | Judgement-heavy work stays with the parent |
+
+Lens references may pin specific roles to `inherit` when judgement matters more than cost (e.g. tech-debt's refactor-proposal subagent). Honor lens overrides.
 
 For maximum mode, the second wave can also be sonnet — what makes maximum more thorough is the *number* of subagents, not stronger models per agent.
 
@@ -114,4 +128,4 @@ For maximum mode, the second wave can also be sonnet — what makes maximum more
 - **Never paste full file contents into the report.** Reference paths and quote short snippets only.
 - **Never invent file paths or quotes.** If a subagent reports something specific, verify the path exists before citing it. Hallucinated references kill trust.
 - **Never pad the report.** A short report with 3 sharp findings beats a long report with 12 weak ones. "Nothing critical found in this lens" is an honorable outcome — say so plainly if true.
-- **Always run subagents in parallel within a wave.** Issue them in a single message with multiple Agent tool calls. Sequential dispatch defeats the purpose.
+- **Run subagents in parallel within a wave by default.** Issue them in a single message with multiple Agent tool calls. The only exception is when one subagent's output is genuinely required as input to another (e.g. competitive's scout 2 needs scout 1's product summary) — in that case run the dependents serially while still firing every independent subagent in parallel.
