@@ -1,6 +1,6 @@
 ---
 name: lunch-break
-description: Autonomous, hands-off "go explore the project" mode. The user picks a lens (UI, copy, SEO, a11y, what-next, competitive, tech-debt, etc.), walks away, and comes back to a written report of ideas and observations. Liberally fans out subagents in two phases (scout then deep-dive). Use when the user says "lunch break", "go explore <X>", "do a <X> review", "go wild on <X>", "audit <X> while I'm away", "look at the project for me", "audit tech debt", "what should we refactor", "what's rotting", "propose refactorings", or invokes /lunch-break explicitly. The user picks ONE lens per run. Available lenses are auto-discovered from references/. If no lens is given, list the lenses and ask which.
+description: Autonomous, hands-off "go explore the project" mode. The user picks a lens (UI, copy, SEO, a11y, what-next, competitive, tech-debt, perf-reliability, etc.), walks away, and comes back to a written report of ideas and observations. Liberally fans out subagents in two phases (scout then deep-dive). Use when the user says "lunch break", "go explore <X>", "do a <X> review", "go wild on <X>", "audit <X> while I'm away", "look at the project for me", "audit tech debt", "what should we refactor", "what's rotting", "propose refactorings", "audit performance", "perf review", "reliability audit", "what's slow", "what could fail", or invokes /lunch-break explicitly. The user picks ONE lens per run. Available lenses are auto-discovered from references/. If no lens is given, list the lenses and ask which.
 ---
 
 # lunch-break — Autonomous, lens-driven project exploration
@@ -29,13 +29,14 @@ If no lens is given:
 3. Show the user something like:
     ```
     Available lenses:
-      - ui          → audit UI/UX rough edges across the app
-      - copy        → review user-facing text for quality and personality
-      - seo         → discoverability and search audit
-      - a11y        → accessibility audit (WCAG, semantics, contrast, keyboard, screen reader)
-      - what-next   → brainstorm features (LLM-powered ok, no manual human work)
-      - competitive → research what similar products do that we don't
-      - tech-debt   → high-confidence refactoring proposals (max 3, with test design)
+      - ui               → audit UI/UX rough edges across the app
+      - copy             → review user-facing text for quality and personality
+      - seo              → discoverability and search audit
+      - a11y             → accessibility audit (WCAG, semantics, contrast, keyboard, screen reader)
+      - what-next        → brainstorm features (LLM-powered ok, no manual human work)
+      - competitive      → research what similar products do that we don't
+      - tech-debt        → high-confidence refactoring proposals (max 3, with test design)
+      - perf-reliability → code-level perf and reliability smells (hybrid report — quick wins + max 3 structural)
     Which lens should I run?
     ```
 4. Wait for the user's pick. Picking the lens *is* the trigger — this is the only acceptable mid-trigger pause.
