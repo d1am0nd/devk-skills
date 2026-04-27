@@ -72,9 +72,9 @@ If you can't write that with reasonable confidence, read one or two more files c
 
 Read `references/clarifying-intent.md` and follow it exactly. Headlines:
 
-- **1–2 sentences, prose only.** Write your read of the change's WHY (problem, motivation, rough mechanism) in one or two sentences and ask "match?". This is the WHY of the *change*, not the review.
-- **No a/b/c here. No stacked follow-up questions.** The intent step ends at "match?". Do not tack on focal-area questions, "things I'd dig into" lists, or scope clarifications. Those go in the review itself, or as ambiguous-finding questions later.
-- **Move on as soon as the human responds.** Confirm or correct, either way you proceed. Don't re-verify, don't fish.
+- **Two modes, agent picks each turn.** Confident on the WHY → 1–2 prose sentences + "match?". Uncertain → single a/b/c question on the WHY, one per turn, until you can write a confident WHY.
+- **a/b/c allowed only for genuine WHY-level uncertainty** — never for focal areas, review work, or commit-message commentary. One question per turn; never stack.
+- **Always exit through prose + "match?".** Even after a few a/b/c rounds, the wrap-up is the prose statement of the WHY. That's the final confirmation gate.
 
 Exit with: a confirmed (or corrected) intent statement. Tell the human you're kicking off — one sentence — and move on.
 
