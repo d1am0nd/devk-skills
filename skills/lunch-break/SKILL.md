@@ -50,7 +50,7 @@ Two modes:
 
 If unclear, default to **liberal**. Tell the user in chat which mode you picked so they know what to expect before they walk away.
 
-## Step 3 — Load the reference and execute
+## Step 3 — Load the reference and the lens memory, then execute
 
 Read `references/<lens>.md` from this skill's directory. The reference defines:
 
@@ -67,6 +67,19 @@ A lens may also specify any of these optional pieces — apply them when present
 - **Model overrides** — a lens may pin a specific subagent role to `inherit` (parent's model) instead of `sonnet` when judgement matters more than cost. Honor them.
 
 Follow the reference. If something in the reference doesn't fit this specific project (e.g. the project has no frontend and the lens is `ui`), adapt — but say so honestly in the report. Don't fake findings to fill a section.
+
+**Memory check (before dispatching subagents):** Read `.lunch-break/<lens>.memory.md` from the project working directory. It is a per-project, per-lens suppression list — areas, topics, or specific findings the user has marked irrelevant on previous runs. If the file doesn't exist, proceed without one.
+
+When the memory file exists, use it twice:
+
+1. **At dispatch.** Prepend a short note to every scout and deep-dive subagent prompt:
+
+   ```
+   Memory note — the user has previously marked these as irrelevant for this project on this lens. Skip them; do not flag them again:
+   <paste the "Suppressed" section of the memory file>
+   ```
+
+2. **At synthesis.** Drop any finding that overlaps a memory entry, even if a subagent surfaced it anyway. If a borderline finding looks similar to something suppressed but you genuinely think it deserves attention, keep it but note in the finding why it's distinct from the suppressed item.
 
 ## Step 4 — Synthesize and write the report
 
@@ -107,6 +120,32 @@ Brief — what areas/files/dirs the subagents covered, and what was deliberately
 ```
 
 After writing the report, post a short summary in the chat: the verdict line, the TL;DR bullets, and the path to the full report. Do not paste the full report into chat.
+
+## Step 5 — Offer a memory update
+
+After posting the chat summary, ask the user once:
+
+> Want me to mark any of these findings as irrelevant for future runs of this lens? Name the finding titles or describe areas to suppress, or say "no thanks". You can also tell me to remove or edit existing memory entries.
+
+Wait for the reply. Three cases:
+
+- **User says no / nothing to add.** Do nothing. Don't write the file.
+- **User names findings or areas to suppress.** Append them to `.lunch-break/<lens>.memory.md`. Create the file with the structure below if it doesn't exist. Each entry: today's date, a short title, and a one-line reason in the user's words (paraphrase if needed, but keep their intent — the reason is what lets future runs judge edge cases).
+- **User wants to remove or edit existing entries.** Edit the file accordingly.
+
+Memory file structure:
+
+```markdown
+# Lunch Break Memory: <lens>
+Project: <project name>
+
+Findings, areas, or topics the user has marked irrelevant for this lens. Future runs skip or de-prioritize anything matching these entries.
+
+## Suppressed
+- <YYYY-MM-DD> — <short title>: <why irrelevant — user's words>
+```
+
+Memory files live in `.lunch-break/` alongside the reports. If the user gitignores the whole `.lunch-break/` directory, memory dies with it. If they want the suppression list shared with their team, suggest a pattern like `.lunch-break/*` plus `!.lunch-break/*.memory.md` so memory is committed but reports are not.
 
 ## Subagent model selection
 
