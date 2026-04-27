@@ -9,7 +9,7 @@ flowchart TD
     A[Form intent hypothesis] --> B{Confident on the WHY?}
     B -->|Yes| C["Post prose hypothesis + 'Match?'"]
     B -->|No| D[Post one a/b/c question on WHY-level unknown]
-    C --> E[Human responds → exit step 5]
+    C --> E[Human confirms or corrects → exit step 5]
     D --> F[Human answers]
     F --> B
 ```
@@ -132,11 +132,11 @@ All three are review work, not intent. Even though a/b/c is allowed in this step
 ## After the human responds
 
 - **Confident mode + confirms:** one sentence — *"Got it — kicking off the deep review now."* — then move to step 6.
-- **Confident mode + corrects:** internalize silently. Don't re-confirm. Trust them.
+- **Confident mode + corrects:** internalize silently. Don't re-confirm, even if the correction substantively flips the WHY. Trust them and proceed.
 - **Uncertain mode + picks a or b:** internalize, then re-evaluate. If you can now write a confident WHY, switch to confident mode (prose + "Match?"). If still uncertain on a different axis, ask the next a/b/c.
 - **Uncertain mode + picks c "Let me explain":** read their answer, internalize, re-evaluate the same way.
 - **Says "just review it, you figure it out":** lock in your hypothesis as the working intent. Note in the final report that intent was unconfirmed.
-- **Reviewing someone else's PR and don't know intent:** treat commit messages as the intent source. Post hypothesis (confident mode); note in the final report that intent came from commits, not the human.
+- **Reviewing someone else's PR and don't know intent:** treat commit messages as the intent source. Uncertain mode isn't available — without a human who knows the change, there's no one to ask. Post your best confident-mode read; note in the final report that intent came from commits, not the human.
 
 ## Where a/b/c questions appear in the skill
 
