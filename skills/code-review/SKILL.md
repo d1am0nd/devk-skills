@@ -70,13 +70,13 @@ If you can't write that with reasonable confidence, read one or two more files c
 
 ## Step 5 — Confirm intent with the human
 
-Read `references/clarifying-intent.md` and follow its loop. Headlines:
+Read `references/clarifying-intent.md` and follow it exactly. Headlines:
 
-- **Intent first, always.** Even on small commits — write down your read of the change's WHY (the problem, the motivation, what the change accomplishes) in a short prose paragraph and ask the human to confirm. This is the WHY of the *change*, not the review.
-- **Prose for intent, a/b/c only for follow-ups.** Follow-ups are for specific unclear spots: a suspicious file:line, a focal-area pick, a constraint.
-- **Stop when you have what you need.** Intent confirmed, any specific concerns clarified or noted. Don't fish for more.
+- **1–2 sentences, prose only.** Write your read of the change's WHY (problem, motivation, rough mechanism) in one or two sentences and ask "match?". This is the WHY of the *change*, not the review.
+- **No a/b/c here. No stacked follow-up questions.** The intent step ends at "match?". Do not tack on focal-area questions, "things I'd dig into" lists, or scope clarifications. Those go in the review itself, or as ambiguous-finding questions later.
+- **Move on as soon as the human responds.** Confirm or correct, either way you proceed. Don't re-verify, don't fish.
 
-Exit with: a confirmed intent statement, a list of focal areas for the deep review, and any specific concerns the human flagged. Then tell them you're kicking off — one sentence — and move on.
+Exit with: a confirmed (or corrected) intent statement. Tell the human you're kicking off — one sentence — and move on.
 
 ## Step 6 — Dispatch the review
 
@@ -113,7 +113,7 @@ This is one redirect point, not a second clarifying loop. Resist re-litigating i
 
 ## Step 8 — Consolidate and present
 
-Read `references/synthesizing-findings.md` and follow it. Aggregate findings, deduplicate, drop low-confidence stuff, sort by severity, and post the report in chat only. Never write a file unless the human asks.
+Read `references/synthesizing-findings.md` and follow it. Aggregate, deduplicate, **resolve any ambiguous findings via a/b/c questions to the human (one at a time)**, drop low-confidence stuff, sort by severity, and post the report in chat only. Never write a file unless the human asks.
 
 A senior engineer leaving review comments on a PR is the model. Tight, specific, no padding.
 

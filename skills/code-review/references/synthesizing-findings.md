@@ -9,6 +9,32 @@ You've completed the mid-review check-in (step 7) and either got a green light o
 - **Cross-check.** If Section A's reviewer flagged something that depends on a caller in Section B (or in untouched code), confirm Section B's reviewer (or a quick grep you do yourself) doesn't already explain it away. Don't surface a finding that's already neutralized elsewhere.
 - **Drop out-of-scope findings.** If the human's intent statement explicitly puts something out of scope (e.g., "I'm not worried about perf here"), drop perf findings unless they cross into correctness.
 
+## Resolve ambiguous findings (a/b/c)
+
+Some findings come back from subagents flagged as **ambiguous** — the answer "is this a bug?" depends on whether the author meant to do it. Don't auto-classify these. Don't drop them as low-confidence. Ask the human, one at a time, with this exact shape:
+
+```
+**Q: `<file:line>` — <one-sentence observation>. Is this:**
+
+a) Bug — <one-line proposed fix>
+b) Intentional because <plausible reason in one short clause>
+c) Something else
+```
+
+Rules:
+
+- **One question per turn.** Wait for the answer, then ask the next one.
+- **Cap at ~3** ambiguous questions per review. If you have more, you're fishing — apply the confidence filter harder and drop the rest.
+- **a) and b) must both be plausible.** If b) ("intentional because…") sounds absurd, you don't actually have an ambiguous finding — you have a bug. Just flag it in the report.
+- **c) is always "something else"** — the human's escape hatch. Don't replace it with a third concrete option.
+- **Skip this step entirely if you have nothing genuinely ambiguous.** Don't manufacture an a/b/c question to look thorough.
+
+Folding answers into the report:
+
+- **a) Bug** → finding stays, classified per the answer (Blocker / Concern).
+- **b) Intentional** → finding drops. Don't include it as a Note "for visibility" — that's just noise.
+- **c) Something else** → ask one short follow-up to understand, then classify.
+
 ## Filter — drop the low-confidence stuff
 
 Apply the same test the subagents should have applied: *would you raise this in a real PR review with a senior colleague?* If no — drop it. If a finding came back from a subagent and you can't articulate why a senior reviewer would care, it doesn't go in the report.

@@ -1,87 +1,83 @@
-# Clarifying intent — the Q&A loop
+# Clarifying intent
 
-You have an intent hypothesis and possibly a few suspicious spots in mind. The point of this step is for *you* to come out the other side knowing exactly what the change is for and where the human wants you to focus.
+You've formed an intent hypothesis from the survey + smart read. This step is short: write your read in 1–2 prose sentences and ask the human to confirm. That is the whole step.
 
-## Step 1 — Confirm intent (always, in prose)
+## What to write
 
-Always do this, even on small or self-explanatory-looking changes. The deal is: you write down the WHY of the change in your own words, the human tells you if you got it right.
+The WHY of the *change*, not the WHY of the review. In one or two sentences, cover:
 
-This is the WHY of the *PR / change*, not the WHY of the review. Cover:
+- What problem is being solved or what capability is being added.
+- Roughly how the change accomplishes it (high-level — not file-by-file).
 
-- What problem is being solved, or what capability is being added.
-- The motivation — why this matters, what was wrong before, what the change unlocks.
-- Roughly how the change accomplishes it (one or two sentences, not a file-by-file walkthrough).
-
-Format:
+## Format
 
 ```
 **My read of this change:**
 
-<one short paragraph — a few sentences — stating the intent and motivation.>
+<one or two sentences — just the WHY and the rough mechanism.>
 
-Does that match? Anything I got wrong or missed?
+Match? Anything I got wrong?
 ```
 
-Rules:
+That is the entire message. Nothing else.
 
-- **Prose, not a/b/c.** The human needs to be able to correct you freely; binary options force a wrong shape onto a freeform answer.
-- Be specific. "Refactors the auth flow" is useless; "Replaces the bespoke session-token check in the auth middleware with the new central `verifyToken` helper, so we stop diverging from the rest of the codebase" is what we want.
-- Don't hedge. Commit to a real hypothesis. If you're guessing on a key piece, say *"I'm not sure whether X or Y — what's the actual driver?"* in the same paragraph.
-- Don't pad with what you'll *do* in the review. Just state what you think the change is *for*.
-- Keep it short. A few sentences. Not a wall of text.
+## Hard rules
 
-If the human's response confirms your read, move on. If they correct you, internalize the correction and don't ask the same thing again — trust the human.
+- **1–2 sentences. Not a paragraph. Not two paragraphs.** If you can't fit it, you don't yet understand the change well enough — go read a bit more diff before posting.
+- **Prose only. No a/b/c here.** No bulleted lists, no "things I'd dig into", no "focal areas", no "let me know if you want me to look at X". The intent step ends at "Match?". The a/b/c shape is for resolving ambiguous findings later — see `synthesizing-findings.md`.
+- **No stacked follow-up questions.** Don't tack on a question about a specific spot, scope, focus, or a constraint. Those belong in the review itself, or as ambiguous-finding questions later.
+- **No commentary on commit subjects.** "This commit says 'addresses review' — sounds like a previous review pass" is noise. The change is what it is now.
+- **Don't hedge.** Commit to a real read. If you genuinely can't tell, fold the uncertainty into the same one or two sentences: *"I can't tell from the diff whether this is X or Y — which is it?"*
+- **Don't pad.** No preamble ("Looking at the diff..."), no trailing "I'll then dispatch subagents to...".
 
-## Step 2+ — Follow-up clarifying questions (a/b/c)
+## Examples
 
-After intent is locked in, you may have one or two specific things still worth asking — a suspicious spot, a focal-area choice, a constraint. Those *do* use a/b/c, one question per turn:
+### Good — concise
 
-```
-**Q: <single question, one short sentence>**
+> **My read of this change:** Adds gzip compression to HTTP responses and bundles `syntax.css` into the main hashed CSS file, both to cut cold-load latency.
+>
+> Match? Anything I got wrong?
 
-a) <concrete answer you think is most likely>
-b) <concrete alternative answer>
-c) Let me explain.
-```
+### Good — concise
 
-Rules for follow-ups:
+> **My read of this change:** Replaces the bespoke session-token check in the auth middleware with the new central `verifyToken` helper, so we stop diverging from the rest of the codebase.
+>
+> Match?
 
-- One question per turn. No stacked "also..." follow-ups.
-- a) and b) must be plausible, concrete answers — not strawmen. The human should be able to pick one without explanation in most cases.
-- c) is always "let me explain". Never replace it with a third concrete option; the human always needs an escape hatch to redirect you.
-- Keep options short. One line each is ideal.
-- Don't justify the question at length. A one-liner of context above the Q is fine; a paragraph isn't.
+### Good — genuine uncertainty folded in
 
-## What follow-ups are worth asking
+> **My read of this change:** Reworks the export pipeline — but I can't tell whether the goal is correctness (the old path silently dropped rows) or speed (parallel writes are new). Which is it?
 
-Pick the question whose answer changes the most about your review. Usually one of:
+### Bad — too long
 
-- **A specific suspicious spot** — "Is `<file:line>` intentional or a mistake?" — when one spot looks off and the answer would change whether you investigate it deeply.
-- **Scope/priority** — "What matters most here: correctness, performance, or readability?" — when the change is broad and review focus matters.
-- **A constraint** — "Should I assume backward compat matters here?" — when an answer would meaningfully shape what you flag.
+> **My read of this change:** These two commits add gzip compression + bundle `syntax.css` into the main hashed CSS file to cut cold-load latency. The implementation has two non-obvious pieces:
+>
+> 1. A `defaultHTMLContentType` middleware that pre-sets `text/html` so chi's `Compress` middleware...
+> 2. `cat syntax.css >> output.css` in both `Dockerfile` and `Taskfile`...
+>
+> The follow-up commit `ab77721` "addresses review" — sounds like a previous review pass already happened.
 
-## What NOT to ask
+The implementation walkthrough is review work, not intent. Save it for the report. Commit-message commentary is noise.
 
-- Anything you can answer by reading more diff. Read first.
-- "What does this code do?" — your job is to figure that out.
-- Style preferences — the standards enforcer handles those.
-- Filler. If you have nothing meaningful to ask, say so and move on.
+### Bad — stacked focal-area questions as fake a/b/c
 
-## After each answer — reconsider, then exit when ready
+> **My read of this change:** ... [intent paragraph] ...
+>
+> A few specific things I'd dig into unless you steer me elsewhere:
+>
+> - a) Do other non-HTML handlers properly override the pre-set `text/html`?
+> - b) Is the gzip middleware actually triggering for the routes you expect?
+> - c) The new test does `os.Chdir("../..")` — is that going to bite us?
 
-Each answer often kills 2–3 of your planned follow-ups. Re-rank what's still worth asking and stop fishing.
+All three are review work. Do them in the review; don't ask the human to triage your scope before you've started. Even if one of them really were worth asking, a/b/c is "alternative answers to one question", not "three different questions".
 
-You're done when:
+## After the human responds
 
-- You can state the change's intent in one or two sentences and the human would agree.
-- You know which suspicious spots (if any) the human wants you to dig into.
-- You know what *kind* of bugs would matter most (correctness, security, perf, UX).
+- **Confirms:** one sentence — *"Got it — kicking off the deep review now."* — then move to step 6.
+- **Corrects:** internalize silently. Don't re-confirm. Trust them.
+- **Says "just review it, you figure it out":** lock in your hypothesis as the working intent. Note in the final report that intent was unconfirmed.
+- **They're reviewing someone else's PR and don't know intent:** treat commit messages as the intent source. Post your hypothesis as before. Note in the final report that intent came from commits, not the human.
 
-When done, say something like *"Got it — kicking off the deep review now. Should be a couple of minutes."* Then move to step 6.
+## Where a/b/c questions DO belong
 
-## Edge cases
-
-- **Human's first message already states intent clearly.** Still write down your read in prose and ask "matches?". Skipping verification entirely defeats the skill; a short paragraph is cheap and surfaces misreads you didn't know you had.
-- **Human corrects your intent.** Internalize the correction silently and proceed. Don't re-ask to verify — trust the human.
-- **Human says "just review it, you figure it out".** Accept, lock in your hypothesis as the working intent, and proceed. Note in the final report that you reviewed against an unconfirmed intent.
-- **Human says "I'm reviewing someone else's PR, I'm not sure of the intent either".** Treat the commit messages and PR description as the intent source. Still post your hypothesis and ask the human to sanity-check it (they may spot something the commits don't say). Mention in the final report that intent came from the commits, not the human.
+Not in the intent step. The a/b/c shape is for **resolving ambiguous findings during/after the review** — when something the review surfaced could plausibly be a bug *or* a deliberate choice, and the answer changes whether it gets flagged. Documented in `synthesizing-findings.md`.

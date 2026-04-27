@@ -65,6 +65,22 @@ Severity:
 
 If your slice is clean: say so plainly. *"No findings — change looks correct."* Don't pad.
 
+### Ambiguous findings — flag separately
+
+Sometimes a candidate finding's classification depends on whether the author meant to do it. If b) ("intentional because…") is genuinely plausible — not a strawman — don't classify it yourself. Don't bury it in the normal list. Don't drop it for low confidence. Flag it under a separate **Ambiguous (needs human input)** section at the bottom of your output, with this shape:
+
+```
+- **<short title>** [Ambiguous]
+  - File: <path:line>
+  - Observation: <one sentence>
+  - If a bug: <one-line proposed fix>
+  - If intentional: <plausible reason in one short clause>
+```
+
+The main agent will surface this to the human as an a/b/c question. Cap at 2 per section — if you have more, you're not filtering hard enough; pick the two whose answer most changes the review.
+
+If b) ("intentional because…") is absurd or you're already >70% sure it's a bug, this isn't ambiguous — flag it as Blocker / Concern in the normal list.
+
 ## Hard rules
 
 - Cite specific `file:line` for every finding.
