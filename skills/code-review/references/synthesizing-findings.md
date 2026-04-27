@@ -16,7 +16,7 @@ Some findings come back from subagents flagged as **ambiguous** — the answer "
 ```
 **Q: `<file:line>` — <one-sentence observation>. Is this:**
 
-a) Bug — <one-line proposed fix>
+a) Bug — <1–2 line fix, code snippet or prose>
 b) Intentional because <plausible reason in one short clause>
 c) Something else
 ```
@@ -55,27 +55,33 @@ Sort findings in this order:
 
 Keep it tight. Follow this exact shape in chat:
 
-```markdown
+````markdown
 ## Code review — <scope, e.g. "last 4 commits" or "feat-auth vs main">
 
 **Verdict:** <one line — e.g. "Two blockers to fix." or "Clean.">
 **Intent:** <one sentence, the confirmed intent>
 
 ### Blockers (N)
-- `file:line` — **<title>**. <one sentence on what's wrong>. → <fix in one phrase>
+- `file:line` — **<title>**. <one sentence on what's wrong>.
+  ```ts
+  - <old line>
+  + <new line>
+  ```
 
 ### Concerns (N)
-- `file:line` — **<title>**. <one sentence>. → <fix in one phrase>
+- `file:line` — **<title>**. <one sentence>.
+  Fix: <1–2 line prose fix>.
 
 ### Standards (N)
-- `file:line` — **<title>** (rule: <source>). → <fix>
+- `file:line` — **<title>** (rule: <source>).
+  Fix: <1–2 line fix>.
 
 ### Nits
 <N nits — say if you want them listed>
 
 ---
 *Reviewed N files across M sections. Skipped: <one-liner, only if anything substantive was skipped>.*
-```
+````
 
 Format rules:
 
@@ -85,7 +91,8 @@ Format rules:
 - **Drop empty sections entirely.** No "Standards: none." If there are no Blockers, the section doesn't exist.
 - **Nits are collapsed by default.** Show the count in the section, not the list. Human can ask to expand. If there are zero nits, drop the section.
 - **Footer is one italic line** with files reviewed and anything substantive skipped (lockfiles don't count as substantive — don't list them).
-- **No "recommendations" section.** Suggested fixes go inline with each finding via `→`.
+- **No "recommendations" section.** Suggested fixes go inline with each finding.
+- **Fixes are 1–2 lines, max.** Code snippet preferred when the fix is mechanical and small (fenced; `-`/`+` lines or just the replacement). Prose with a `Fix:` prefix when the fix needs explanation that doesn't fit cleanly in 2 lines of code. If the fix needs more than 2 lines, write a one-line direction and let the human ask for details.
 
 ## Don'ts
 
