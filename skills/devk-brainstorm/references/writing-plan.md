@@ -2,63 +2,103 @@
 
 > Reference loaded by `devk-brainstorm` after `references/writing-spec.md` has produced an approved spec. Follow these instructions as if they replaced the main skill.
 
-Spec is approved. Now produce a plan that the execution phase can run section-by-section, potentially with parallel subagents. This phase is about **structure and execution order**, not re-designing the spec.
+Spec is approved. Now produce a plan structured as a **directed graph of sections, grouped into waves** the executor can dispatch in parallel. This phase is about structure, dependencies, and execution waves — not re-designing the spec.
 
 ## Core principles
 
-- **Quality over speed. No shortcuts.** If a section can't be done properly in one bite, split it. Don't cram.
-- **Each section must be self-contained.** A fresh subagent with just that section's text should be able to do it. That means: context the section needs is explicit in its description, not "see section 3."
-- **TDD per section.** Each section lists what tests to write first. If a section can't have tests (e.g., pure config change), say so and justify.
-- **Parallelize honestly.** Mark sections parallel-safe only when they truly don't touch overlapping files or state. False parallelism creates merge conflicts and worse bugs.
-- **Sections should be right-sized.** A section is one focused chunk of work — not "implement the whole feature." If a section would take a subagent more than ~30 minutes of work or touch more than ~5-10 files, split it.
+- **Quality over speed. No shortcuts.** A bad plan turns into wasted parallel work and merge conflicts.
+- **Parallelism is the default, not the exception.** Two sections that touch disjoint files can run in parallel. Most pairs should. Sequence only when there's a real dependency.
+- **Each section must be self-contained.** A fresh subagent with the section's text should be able to execute it. Context lives in the section, not "see section 3."
+- **TDD per section.** Each section lists the tests to write first as **behaviors**, not assertions. If you can't describe the tests, the section is underspecified — clarify before moving on.
+- **Right-sized, not strictly-sized.** A section is one focused chunk a single subagent can complete in one pass. Use judgment; no hard limits on file count or time.
 
 ## Inputs
 
 - `.devk/spec.md` (approved)
 - `.devk/requirements.md` (context)
-- The project itself — you may need to scan parts of it to size sections correctly.
+- The project itself — scan it enough to figure out what files different sections will actually touch.
+
+## Designing for parallelism
+
+The biggest lever in this workflow is **how you cut the spec into sections**. Cut poorly → everything serializes. Cut well → most work runs in parallel and the wall clock shrinks.
+
+**Prefer orthogonal sections over vertical slices** when the spec allows it.
+
+- ✅ **Orthogonal:** `S3a` = "Registration endpoint + its tests"; `S3b` = "Email validator module + its tests" — different files, run in parallel after the shared model exists.
+- ❌ **Vertical and overlapping:** `S3` = "User registration end-to-end: DB write + API handler + UI form + tests" — one fat section that doesn't parallelize with anything because it touches every layer.
+
+Vertical slices are the right call when **incremental end-to-end delivery is the actual unit of work** — e.g., shipping one user flow at a time when partial flows are useless. Use vertical slices then, and accept the parallelism cost.
+
+**Patterns that help parallelism:**
+- Establish bedrock first (schema, shared types, interfaces) → downstream sections build on it in parallel.
+- Use feature flags or branch-by-abstraction to land related code in parallel without breaking integration.
+- Split by file/module boundary: one section per module when modules don't depend on each other.
+
+**Patterns that hurt parallelism:**
+- "All DB changes in one section" — creates a giant section every downstream wave waits on.
+- Touching shared config, types, or schemas across multiple sections in the same wave.
+- Designing sections by *layer* (DB layer, API layer, UI layer) instead of by *feature concern*.
 
 ## Plan structure
 
 Write to `.devk/plan.md`:
 
-```markdown
+````markdown
 # Plan: <feature name>
 
 ## Overview
-<3-5 sentences: the order of operations at a high level. Why this order?>
+<3-5 sentences: the shape of the work, why this wave order.>
 
-## Execution graph
-<ASCII diagram or simple list showing dependencies. Example:>
+## Dependency graph
 
-  [S1: schema] → [S2: model] → [S3a: API] ∥ [S3b: UI] → [S4: wiring]
+```mermaid
+graph TD
+    S1[S1: Schema migration]
+    S2[S2: User model]
+    S3a[S3a: Registration endpoint]
+    S3b[S3b: Email validator]
+    S4[S4: Frontend wiring]
 
-Sections in the same parallel group are separated by `∥`.
+    S1 --> S2
+    S2 --> S3a
+    S2 --> S3b
+    S3a --> S4
+    S3b --> S4
+```
+
+## Execution waves
+
+- **Wave 1:** S1 — Schema migration
+- **Wave 2:** S2 — User model
+- **Wave 3:** S3a, S3b — registration endpoint + email validator (parallel)
+- **Wave 4:** S4 — frontend wiring
+
+Sections in the same wave are parallel-safe by construction (file-disjoint). The executor dispatches the entire wave at once.
 
 ## Sections
 
-### S1: <section title>
+### S1: Schema migration
 
 **Goal:** <one sentence>
 
-**Depends on:** <prior sections by ID, or "none">
-**Parallel-safe with:** <sibling section IDs, or "none">
+**Wave:** 1
+**Depends on:** none
 
-**Files touched (anticipated):** <list or glob — approximate is fine, subagent may refine>
+**Files touched (anticipated):** <list or glob — within a wave these lists must not overlap>
 
 **Tests to write first (TDD):**
-- <test name / scenario> — expects: <observable behavior>
-- <test name / scenario> — expects: <...>
+- <behavior> — expects: <observable>
+- <behavior> — expects: <observable>
 
 **Implementation outline:**
-- <bullet 1 — what the implementation needs to do>
-- <bullet 2>
+- <bullet — what the impl needs to do>
+- <bullet>
 
 **Acceptance criteria:**
 - <observable thing the reviewer will check>
 
 **Notes for the section agent:**
-<anything non-obvious — e.g., "use the existing `X` helper, don't re-invent", or "this file has a linter rule about Y">
+<anything non-obvious — e.g., "use the existing `Foo` helper, don't re-invent", "this file has a linter rule about Y">
 
 ---
 
@@ -69,76 +109,76 @@ Sections in the same parallel group are separated by `∥`.
 ---
 
 ## Material decisions (carried from spec)
-<Repeat the "Decisions and rationale" from the spec so the execution agents see them without re-reading the spec. One line each.>
+<Repeat the "Decisions and rationale" from the spec. One line each. The execution agents see this without re-reading the spec.>
 
 ## Risks / open questions
-<Anything from the spec that might bite during execution. Include mitigations.>
-```
+<Anything from the spec that might bite during execution. Mitigations where you have them.>
+````
 
-## How to size and split sections
+## Wave rubric — file disjointness primary
 
-Good sections are vertical slices, not horizontal layers:
-- ✅ **Good:** "S3: User registration endpoint — DB insert, validation, response shape, tests for the full path"
-- ❌ **Bad:** "S1: All DB changes, S2: All controllers, S3: All UI, S4: Wiring" (creates integration risk at the end; nothing works until S4)
+Two sections belong to the same wave (run in parallel) **if and only if** all three are true:
 
-Exceptions to the vertical-slice rule:
-- **Shared foundation** (e.g., new DB schema, new shared type) that multiple sections depend on — make it S1, then downstream sections parallelize.
-- **Cross-cutting concerns** (e.g., config change, migration) — standalone section.
+1. **They touch disjoint files.** Their "Files touched" lists do not overlap. **This is the primary check** — it's mechanical and verifiable.
+2. **Neither depends on the other's output.** No "S3 imports a thing S2 just exported."
+3. **Their tests don't share mutable state without isolation.** E.g., both writing to the same DB table in integration tests without per-test cleanup.
 
-## Parallel safety rubric
+If any check fails → different waves.
 
-Mark two sections parallel-safe ONLY if ALL are true:
-1. They don't modify the same files.
-2. They don't modify config/schema/types that the other reads.
-3. Their tests don't share state (e.g., both writing to the same DB table in integration tests).
-4. Completing one doesn't change acceptance criteria of the other.
-
-If uncertain → mark sequential. The cost of a false positive (merge conflicts, broken build) is much higher than the cost of sequential execution.
+If you're not sure whether files overlap, glob both lists and check. False parallelism creates merge conflicts and silent bugs; the cost of one extra wave is small. **When uncertain, sequence.** But uncertainty should be rare — file paths are knowable.
 
 ## TDD-first discipline
 
-For each section, you must write the tests-first list. This forces clarity on what the section is actually *for*. If you can't describe the tests, the section is underspecified — clarify before moving on.
+For each section, write the tests-first list as **behaviors**, not assertions. "`register()` creates a user with the right shape" is one behavior (one test, several assertions on the returned user is fine). "`register()` rejects duplicate emails" is a different behavior (separate test).
 
-For sections that genuinely can't be unit-tested (e.g., "add a button to a page"), specify what observable behavior will be checked (e.g., "snapshot test, or manual check of click flow") and WHY no deeper test is feasible.
+If a section can't be unit-tested cleanly (e.g., "add a button to a page"), say so and specify the observable check (snapshot, manual flow, integration test).
 
-**Keep the "tests to write first" list lean.** Each entry should be one *behavior*, not one *assertion*. If five entries share identical setup and only differ in which field is checked, collapse them to one entry that covers the shape, or note "parameterize over X, Y, Z". The section agent will expand on it, but the plan sets the tone — sprawly test lists produce sprawly test files. Thorough ≠ fragmented.
+**Keep the list lean.** Tests cover behaviors, not fields. Five entries with nearly identical setup differing in which field they assert on should be one parameterized test. The section agent expands on the plan but takes its tone from it — sprawly plans produce sprawly test files.
+
+## Sizing — qualitative, not strict
+
+A good section:
+- **Is self-contained.** One fresh subagent can complete it without loading the whole project.
+- **Has clear acceptance criteria.** The reviewer subagent can check "done" against the plan entry alone.
+- **Touches a coherent set of files** mapping to one concept (a model, an endpoint, a validator, a migration).
+
+No hard limits on file count or time — let the work shape the section. If a section feels like it's straddling two concerns, split it. If two adjacent sections feel like they're really one, merge them.
 
 ## When the spec can't be planned
 
-If you realize mid-plan that the spec has gaps — e.g., two spec sections contradict each other, or a required data shape is missing — STOP. Go back to the user:
+If you find mid-plan that the spec has gaps — two sections contradict, a required data shape is missing, two sections can't be made file-disjoint without spec changes — **STOP**. Go back to the user:
 
-> "While planning, I found <specific gap/conflict>. I can't plan around it without making decisions the spec didn't cover. Options:
+> "While planning, I found <specific gap or conflict>. I can't plan around it without making decisions the spec didn't cover. Options:
 > a) I make this call myself and document it — [my proposal]
 > b) You want to decide this one — [option 1] / [option 2]
-> c) Pause and loop back to spec to tighten this"
+> c) Pause and loop back to the spec to tighten this"
 
-Don't guess on fundamentals. Small gaps you can fill with a one-line decision in the plan (announced); big gaps need the human.
+Small gaps you can fill with a one-line announced decision in the plan; big gaps need the human.
 
 ## Approval gate (third and final gate before execution)
 
-Present the plan in PM-friendly terms. The human is approving *the shape of the work*, not reviewing the technical plan line by line. Full plan lives at `.devk/plan.md`; your presentation is a summary, not a dump.
-
-When the plan is written, present:
+Present the plan in PM-friendly terms. The full plan lives at `.devk/plan.md`; your presentation is a summary.
 
 > ## Plan ready for your sign-off
 >
-> Here's how I'll build this, broken into pieces I can ship one at a time.
+> Here's how I'll build this, broken into waves I can dispatch in parallel.
 >
-> **The pieces:**
-> 1. <Plain-language description of section 1, e.g., "Database changes for user sessions">
-> 2. <Section 2 in plain language>
-> 3. <Section 3 — or for parallel groups: "The API endpoint and the UI can go in parallel">
-> <...>
+> **The waves:**
+> 1. <Plain-language description of wave 1>
+> 2. <Wave 2 — for parallel waves: "Two pieces in parallel: X and Y">
+> 3. <Wave 3>
 >
-> **Order:** <1-2 sentences on why this order. E.g., "Foundation first, then the user-facing parts, then polish.">
+> **Order rationale:** <1-2 sentences. E.g., "Schema first because everything else builds on it; then the orthogonal feature pieces in parallel; then wiring.">
 >
-> **Anything new I decided during planning:** <material decisions not already in the spec, one line each. Omit if none.>
+> **Parallelism payoff:** <e.g., "Waves 3 and 5 run two pieces in parallel — should noticeably cut wall time vs. sequential.">
 >
-> Sound right? Approve and I'll start building — I'll report back per piece as I go. Or flag what to change.
+> **Anything new I decided during planning:** <material decisions not already in the spec — omit if none.>
+>
+> Sound right? Approve and I'll start building — I'll report per wave as it lands. Or flag what to change.
 
 **Wait for explicit approval.** On approval:
 
-1. **Commit the plan** (if the project is a git repo). Stage only `.devk/plan.md`. Match project commit convention if obvious; default to `devk: plan for <feature title>`.
+1. **Commit the plan** (if git repo). Stage only `.devk/plan.md`. Match the project's commit convention if obvious; default `devk: plan for <feature title>`.
    ```
    git add .devk/plan.md
    git commit -m "devk: plan for <feature title>"
@@ -147,18 +187,9 @@ When the plan is written, present:
 
 2. Load `references/executing-plan.md` from this skill and follow it.
 
-## Reminders
-
-- One question at a time IF you need to loop back to the user (only on genuine gaps).
-- Sections are vertical slices by default; split shared foundations out when needed.
-- Parallel-safe is a strong claim. Default to sequential when uncertain.
-- TDD per section, no exceptions without justification.
-- Approval gate is the LAST stop before execution. Make it easy to approve or redirect.
-- Artifact (`plan.md`) is technical. Your human-facing presentation is PM-friendly.
-
 ## If the user wants to stop here
 
-If the human wants to pause or drop this after seeing the plan ("let's not do this", "shelving it", "changed my mind"), acknowledge and offer to tidy up `.devk/`.
+If the user wants to pause or drop this after seeing the plan ("let's not do this", "shelving it", "changed my mind"), acknowledge and offer to tidy up `.devk/`.
 
 > Got it — pausing this.
 >
@@ -177,3 +208,13 @@ Act on the answer:
 - **a)** Do nothing.
 - **b)** `mkdir -p .devk/archive/<date>-<slug>/`, `git mv` (or `mv`) existing `.devk/*.md` into it. Commit if git repo: `devk: archive in-flight work (<slug>)`.
 - **c)** Show the list, confirm, then `rm`. Commit: `devk: discard in-flight work (<slug>)`.
+
+## Reminders
+
+- Parallelism is the default. Sequence only when there's a real dependency.
+- Orthogonal sections > vertical slices when the spec allows it.
+- Mermaid graph + wave list in `plan.md` — both serve different readers.
+- File disjointness is the wave rubric. Check it mechanically.
+- TDD per section, tests as behaviors not assertions.
+- Approval gate is the LAST stop before execution. Make it easy to approve or redirect.
+- Artifact (`plan.md`) is technical. The human-facing presentation is PM-friendly.

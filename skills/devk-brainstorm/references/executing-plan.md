@@ -1,80 +1,87 @@
-# Executing the plan — dispatch sections, review, advance, replan if needed
+# Executing the plan — dispatch waves in parallel, review, advance, replan if needed
 
 > Reference loaded by `devk-brainstorm` after `references/writing-plan.md` has produced an approved plan. Follow these instructions as if they replaced the main skill.
 
-The plan is approved. Execute it section by section (with parallelism where the plan marked it safe), review each section's output, fix blockers, and proceed. Escalate to the human only when the plan itself needs to change.
+The plan is approved. It's a directed graph of sections grouped into **waves**: everything in a wave is parallel-safe by design (sections touch disjoint files). You execute wave-by-wave — dispatching all sections in a wave in parallel, reviewing them in parallel, committing them once the wave passes review, then moving on.
 
 ## How subagent dispatch works here
 
-This phase spawns several kinds of subagent — section implementers, a debugging helper, and a final-review agent. Subagents do NOT load skills themselves. You read the relevant subagent reference file and **inline its content into the subagent's prompt**. That pattern repeats for every dispatch in this document. The reference files live at:
+This phase spawns subagents for: section implementation, per-section review, debugging when stuck, and final review. Subagents do NOT load skills themselves — you read the relevant subagent reference file and **inline its content into the subagent's prompt**.
 
-- `references/subagents/section-tdd.md` — for implementing a single section (used per section)
-- `references/subagents/final-review.md` — for the end-of-work holistic review (used once)
-- `references/subagents/researching-docs.md` — for dep/API verification (used if a new dep appears mid-execution)
+- `references/subagents/section-tdd.md` — implementing one section (used per section, every wave)
+- `references/subagents/reviewing-section.md` — reviewing one section (used per section, every wave)
+- `references/subagents/final-review.md` — end-of-work holistic review (used once)
+- `references/subagents/researching-docs.md` — dep/API verification (used if a new dep appears mid-execution)
 
-Per-section review is NOT a subagent — you (the main agent) run it yourself using `references/reviewing-section.md` as a checklist. See step 4 of the main loop.
-
-`devk-debugging` stays as a top-level skill (users also invoke it directly). When you need it, instruct the subagent to load it via the Skill tool — that's an exception to the inlining pattern for this one skill.
+`devk-debugging` stays a top-level skill (the user also invokes it directly for unrelated bugs). When you need it, instruct a subagent to load it via the Skill tool — that's the one exception to the inlining pattern.
 
 ## Core principles
 
-- **Quality over speed. No hacks. Project lives for years.** If a section can't be completed properly, you pause and reassess — you do NOT hand-wave past a failure.
-- **One subagent per section.** Fresh context for each. Subagents follow the inlined contents of `references/subagents/section-tdd.md`.
-- **Parallel groups run in parallel**, in a single message with multiple Agent tool calls. Sequential sections run one after the other.
-- **Per-section review is mandatory**, not optional. After each completed section (or each of a parallel group), you run the review yourself per `references/reviewing-section.md` before the next section starts. No subagent — you already have the plan/spec context.
-- **Each section commits independently** once it passes review. This gives a clean, bisect-friendly history and lets the human inspect any checkpoint.
-- **Replan is always on the table.** If execution reveals the plan is wrong, stop and loop in the human with options.
+- **Quality over speed. No hacks. Project lives for years.** A wave that doesn't pass review pauses the line — you do NOT advance.
+- **Waves dispatch in parallel.** All sections in a wave fire in ONE message with multiple Agent tool calls. Same for review subagents. Sequential dispatch within a wave defeats the entire point.
+- **One subagent per section per role.** Each section gets its own impl subagent and its own review subagent. Fresh context every time. That's how quality stays high at scale.
+- **Per-section review is mandatory.** Never skipped. The reviewer subagent reads the section's diff, fixes in-scope issues, reports anything needing your call.
+- **Per-section commits.** Even within a wave, commit each section independently in section-ID order once it passes review. Clean bisect-friendly history.
+- **Replan is always on the table.** If review surfaces a spec or plan-level issue, stop and loop in the human.
 
 ## Output discipline (critical)
 
-You are orchestrating — potentially dispatching many subagents whose individual outputs could flood the conversation. **Be terse to the human. Be silent during tool use.** The human is in product mode now — they want to know progress, not implementation mechanics.
+You are orchestrating potentially many parallel subagents. **Be terse to the user. Be silent during tool use.** The user is in product mode now — they want progress, not transcripts.
 
-Only surface messages to the user at these moments:
-- **Starting execution** — one line: "Starting — <N pieces of work> ahead. I'll report back per piece and commit as I go."
-- **Section complete** — one short line per section: "✓ <short human-readable description> done."
-- **Parallel group complete** — "✓ <two descriptions> done in parallel."
-- **Blocker / replan signal** — always surface in full. Frame the problem in plain language first, then the technical detail.
+Surface messages only at:
+- **Starting execution** — one line: "Starting — `<N>` pieces across `<M>` waves. I'll report per wave."
+- **Wave starting** — one line per wave if it has more than one section: "Wave `<N>`: `<short human-readable list>`."
+- **Wave complete** — one short line: "✓ Wave `<N>` done (`<short descriptions>`)."
+- **Blocker / replan signal** — surface in full, plain language first, technical detail second.
 - **Final review running** — "Doing a last-pass review before handing back."
-- **All done** — concise PM-friendly wrap-up (see "When all sections are done").
+- **All done** — concise PM-friendly wrap-up (see end of file).
 
-Avoid jargon in status lines. Section IDs like "S3a" are for internal tracking; the user sees "the registration endpoint" or "the email-validation piece". Keep the artifacts (`plan.md`, commits) technical — the *human-facing voice* is what softens.
+Avoid jargon in status lines. Section IDs like `S3a` are for internal tracking; the user sees "the registration endpoint" or "the email-validation piece". Artifacts (`plan.md`, commits) stay technical; the human-facing voice softens.
 
 Do NOT narrate:
-- Each Agent call you make
-- Tool results from subagents (read silently, summarize only if relevant)
-- Your internal reasoning about which section is next
-- `git` operations (do them silently; mention the commit SHA on completion if useful)
-- Progress tracking file updates
+- Every Agent call you make
+- Tool results from subagents (read silently, summarize only if useful)
+- Internal reasoning about which wave is next
+- `git` operations (do them silently)
+- Progress file updates
 
-Treat this as: *the human wants a status line, not a transcript.* If something is going fine, stay quiet. If something is broken, speak up immediately and clearly.
+Rule of thumb: *the user wants a status line, not a transcript.* If something's going fine, stay quiet. If something's broken, speak up clearly.
 
 ## Setup before dispatching
 
-1. Read `.devk/plan.md` carefully — sections, parallel groups, dependencies, TDD outlines.
-2. **Record the pre-execution baseline.** If this is a git repo, capture the current HEAD SHA now — the final-review subagent needs it to diff the full changeset. Run `git rev-parse HEAD` and remember the result; you'll pass it into the final-review prompt. If not a git repo, note "no baseline (not a git repo)" — final review will do its best from working-tree state.
-3. Create `.devk/progress.md` (if not present) to track section status. Schema:
+1. Read `.devk/plan.md` carefully — the mermaid graph, the wave list, each section's entry.
+2. **Record the pre-execution baseline.** If git repo: `git rev-parse HEAD` and remember it — the final-review subagent needs it to diff the full changeset. Else note "no baseline (not a git repo)."
+3. Create `.devk/progress.md` if not present:
    ```markdown
    # Progress
-   Baseline: <sha from step 2, or "no baseline">
+   Baseline: <sha or "no baseline">
 
-   - [x] S1: <title> — done, reviewed, 0 blockers
-   - [ ] S2: <title> — in progress
-   - [ ] S3a: <title> — pending (parallel with S3b)
-   - [ ] S3b: <title> — pending (parallel with S3a)
+   ## Wave 1
+   - [ ] S1: <title>
+
+   ## Wave 2
+   - [ ] S2: <title>
+   - [ ] S3a: <title>
+   - [ ] S3b: <title>
+
+   ## Wave 3
+   - [ ] S4: <title>
    ```
-   Update this after each section completes.
+   Update after each section commits.
 
-## The main loop
+## The wave loop
 
-For each section (or parallel group) in execution order:
+For each wave in order:
 
-### 1. Dispatch
+### 1. Dispatch impl subagents — one message, multiple Agent calls
 
-**Sequential section:** one Agent call. Before dispatching, read `references/subagents/section-tdd.md` once into working memory — you'll reuse it across every section dispatch in this execution.
+Read `references/subagents/section-tdd.md` once into working memory on the first wave; you'll reuse it across every section in every wave.
+
+Send ONE message with N Agent tool calls, where N is the number of sections in this wave. Each call:
 
 - `subagent_type`: `"general-purpose"`
-- `model`: the default (or upgrade to Opus for complex sections — use judgment; Sonnet is fine for most)
-- `description`: "S<ID>: <short title>"
+- `model`: default (Opus for complex sections — use judgment; most sections are fine on the default)
+- `description`: `"S<ID>: <short title>"`
 - `prompt`:
   ```
   You are implementing one section of a plan with strict TDD. Follow these instructions exactly:
@@ -85,117 +92,122 @@ For each section (or parallel group) in execution order:
   - The plan is at .devk/plan.md. Your section is S<ID>. Execute ONLY that section.
   - Spec: .devk/spec.md
   - Requirements: .devk/requirements.md
-  - Material decisions (carried forward): <paste them here from the plan>
-  - Prior completed sections: <list IDs or "none yet">
+  - Material decisions (carried forward): <paste from plan>
+  - Prior completed sections in earlier waves: <list IDs or "none yet">
+  - Sections running in parallel with you in this wave: <list IDs> — they touch disjoint files per the plan, so coordinate by staying inside YOUR files only.
 
-  Follow TDD strictly. Announce material decisions in your return summary.
-  Return a concise summary: what you did, files touched, test results, any announcements.
+  Follow TDD strictly. Announce material decisions. Return the structured summary.
   ```
 
-**Parallel group:** send multiple Agent tool calls in ONE message. Each subagent gets its own section. This is how parallelism works — don't dispatch them serially.
+For a single-section wave, that's one Agent call. For a 3-section wave, three Agent calls in one message — the harness runs them concurrently.
 
-### 2. Wait and collect
+### 2. Wait, then verify claims
 
-Wait for the section(s) to complete. Read each subagent's summary. Don't assume the section went perfectly — the subagent's summary is a claim, not proof.
+When all impl subagents return, read their summaries. For each:
+- Run the section's tests (or at least the section's test set) and confirm green. Don't trust the subagent's "tests passing" claim without checking.
+- If any section returned STUCK or has failing tests → see step 5 (stuck handling).
 
-### 3. Verify the section's claims
+If one section was STUCK, you can still dispatch reviews for the other sections that returned cleanly — review runs in parallel with debugging.
 
-Before proceeding to review, do a quick sanity check yourself:
-- Run the project's test suite (or at least the tests the section added) and confirm they pass.
-- If tests don't pass, the section is NOT done. Go to step 5 (stuck handling).
+### 3. Dispatch review subagents — one message, multiple Agent calls
 
-### 4. Run the per-section review (in this agent)
+Read `references/subagents/reviewing-section.md` once into working memory on the first wave; reuse it after.
 
-Read `references/reviewing-section.md` once into working memory on the first pass — it's the checklist you'll apply to every section. Subsequent sections can lean on what you've internalized, but glance back if your read starts feeling thin.
+Send ONE message with one Agent call per completed section in the wave. Each call:
 
-For each completed section (or each of a parallel group), run the review yourself against that section's diff:
+- `subagent_type`: `"general-purpose"`
+- `model`: default (Sonnet is fine for most; upgrade to Opus only if the section is unusually subtle)
+- `description`: `"Review S<ID>"`
+- `prompt`:
+  ```
+  You are reviewing one section of a plan. Follow these instructions exactly:
 
-1. `git diff HEAD` (and `git status` for new files) to see the section's changes.
-2. Re-read the section's entry in `.devk/plan.md` — the acceptance criteria define "done."
-3. Read the changed files fully.
-4. Apply the checklist in `references/reviewing-section.md` — what you're looking for, severity rubric, hidden-hack watchlist, what NOT to flag.
-5. Form your findings mentally in the shape the checklist describes (Summary / Blockers / Concerns / Nits). No need to write them out as a document — they flow straight into action below.
+  <<< paste the full content of references/subagents/reviewing-section.md here >>>
 
-Stay tight. Don't wander into unrelated files or re-review the whole project.
+  Context:
+  - Your section: S<ID> — <title>
+  - Plan: .devk/plan.md (your section's entry has the acceptance criteria)
+  - Spec: .devk/spec.md (read only what's relevant)
+  - The section's changes are UNCOMMITTED. Use `git diff HEAD` and `git status` to see them.
 
-**Default stance: if a finding is a confirmed improvement, fix it. Don't file it as a TODO for the user.** The user expects you to own quality. Handing back a list of "things I noticed but didn't do" is not the job.
+  Read the diff, read the changed files in full, fix in-scope issues, report anything needing orchestrator action. Return the structured report.
+  ```
 
-**Blocker findings:** must be fixed before proceeding. Fix them here in the main agent, or dispatch a small fix subagent if the scope benefits from fresh context. Re-verify tests. Do NOT start the next section until blockers are cleared.
+### 4. Read review reports, route findings
 
-**Concern findings:** *default to fixing them now*. If the fix is clearly a win (tightens a contract, plugs an edge case, removes a hack, simplifies code) — do it as part of this section. If fixing would materially expand scope (separate refactor, new dependency, a day of work), *then* add to `.devk/progress.md` under "carry-forward concerns" and handle in the dedicated fix pass before final review. Escalate to the user only when the fix is ambiguous — when there's a real judgment call about whether it's an improvement at all.
+For each review subagent's return:
 
-**Nit findings:** fix anything that's a one-liner quality bump. Drop the rest silently.
+- **Status: CLEAN** or **FIXED_IN_PLACE** — section is good. Re-run the section's tests to confirm the review's fixes didn't break anything. Move to commit (step 7).
+- **Status: NEEDS_ORCHESTRATOR_ACTION** — there are open items. Look at each:
+  - `BLOCKER` (in-section but reviewer didn't fix) → dispatch a focused fix subagent (inline `section-tdd.md`, instruct it to address only the listed blocker, no scope creep). Re-verify when it returns.
+  - `OUT_OF_SCOPE` (touches other sections / spec / plan) → this is a replan signal. Stop the wave loop. Go to step 6.
+  - `NEEDS_HUMAN` → escalate to the user with the finding + suggested resolution + a/b options.
+- **Status: STUCK** — review couldn't complete. Investigate briefly yourself (read the diff). If you can resolve, do so. If not, dispatch debugging.
 
-**Output discipline:** run the review silently. The user gets the one-line "✓ <section> done" after you've reviewed, fixed, and committed — not a review transcript.
+The point of the review subagent is to keep the main agent's context light. **Don't re-read the diff yourself unless the review report indicates a problem.**
 
-### 5. Stuck handling (a section fails or spins)
+### 5. Stuck handling (impl returned STUCK or tests fail)
 
-If a section can't be completed — tests won't pass after reasonable iteration, or the subagent reports it's stuck — **do NOT ship the failure**.
+Dispatch the debug subagent — the one exception to the inlining pattern, because `devk-debugging` is its own skill:
 
-Step 1: Spawn a debugging subagent. This is the one exception to the inlining pattern — `devk-debugging` stays a top-level skill (users also invoke it directly), so the subagent loads it via the Skill tool. Prompt: "Load and follow the `devk-debugging` skill via the Skill tool. Failing test: <…>. Section goal: <…>. What's been tried: <…>."
+- `subagent_type`: `"general-purpose"`
+- `description`: `"Debug S<ID>"`
+- Prompt: `"Load and follow the devk-debugging skill via the Skill tool. Failing test: <…>. Section goal: <…>. What's been tried: <…>."`
 
-Step 2: If debugging resolves it, continue. If debugging also fails to resolve, that's a replan signal (step 6).
+If debugging resolves it → go back to step 3 to review the now-fixed section. If debugging also fails → replan signal (step 6).
 
-### 6. Replan signal (when the plan itself is wrong)
+### 6. Replan signal
 
 You hit a replan signal when ANY of:
-- A section's blockers can't be fixed without changing assumptions the plan made.
-- Two sections turn out to conflict in a way the plan missed.
-- A reviewer flags that the approach (not the code) is wrong.
-- Debugging reveals the spec-level assumption is broken (e.g., "the API we're integrating with doesn't work the way the spec assumed").
+- Reviewer flags `OUT_OF_SCOPE` or `NEEDS_HUMAN` for a spec/plan-level issue
+- Two sections in the same wave produce a conflict the plan missed
+- Debugging can't resolve a blocker without changing assumptions the plan made
 
-**STOP.** Mark progress accordingly. Present to the human in plain language:
+STOP. Update `.devk/progress.md` to reflect the partial state. Present to the human in plain language:
 
 > ## Hit a snag — need your input
 >
-> **What happened:** <1-2 sentences in plain language. E.g., "The third-party API we're integrating with works differently than we assumed — it paginates instead of returning all results at once.">
+> **What happened:** <1-2 sentences in plain language. E.g., "The third-party API paginates instead of returning all results — that wasn't in the spec.">
 >
-> **Why the plan doesn't fit anymore:** <specific, but non-technical if possible>
+> **Why the plan doesn't fit anymore:** <specific, non-technical if possible>
 >
 > **Options:**
-> **a)** Small course correction — <minimal change that fixes it, no re-planning needed>
+> **a)** Small course correction — <minimal change, no re-planning needed>
 > **b)** Rework the design a bit — <change that touches the spec; will need a quick re-review>
 > **c)** Step back and rethink — <if the whole approach needs another look>
 >
-> **What's done so far:** <plain-language list of what's working>.
-> **What's blocked:** <plain-language list>.
+> **What's done so far:** <plain-language list of what's working>
+> **What's blocked:** <plain-language list>
 >
 > Which way do you want to go?
 
-**Do not silently fix a spec-level problem with a code hack.** That's exactly the "no hacks" principle's core case.
+**Do not silently fix spec-level problems with code hacks.** That's the core "no hacks" case.
 
-### 7. Commit the section
+### 7. Commit each section in the wave
 
-Once the section passes review (blockers cleared, tests green), commit the section's changes before moving to the next section. This keeps each section as a clean checkpoint in history.
+Once all sections in the wave have passed review (or all blockers cleared, all tests green), commit each section in section-ID order. One commit per section.
 
-Skip silently if not a git repo. Otherwise:
+Skip silently if not a git repo. Otherwise, for each section:
 
-1. Stage only files changed by this section. Use `git diff --name-only HEAD` to see what's touched; confirm nothing unrelated is included. Include `.devk/progress.md` in the commit too.
-2. Match project commit convention if one is clear from `git log --oneline -10`. Default to `devk: S<ID> <section title>`.
-3. If pre-commit hooks fail: this is signal, not nuisance. Fix the underlying issue, re-stage, new commit. Never use `--no-verify`.
+1. Stage only files changed by this section. Use `git diff --name-only HEAD` to confirm — sections in the same wave are file-disjoint by plan design, so this should be clean.
+2. Match the project's commit convention if one is clear from `git log --oneline -10`. Default `devk: S<ID> <section title>`.
+3. If pre-commit hooks fail: this is signal, not nuisance. Fix the underlying issue, re-stage, new commit. Never `--no-verify`.
 
-Example:
-```
-git add <section's touched files> .devk/progress.md
-git commit -m "devk: S<ID> <section title>"
-```
+After all sections are committed, update `.devk/progress.md` and commit it (or fold it into the last section's commit — minor preference).
 
-Surface only the one-line completion message to the user ("✓ S<ID> done (N tests passing, N files, committed <sha>)."). Don't paste the diff or narrate the commit.
+Then output one line to the user: `"✓ Wave <N> done (<short descriptions>)."`
 
-### 8. Update progress and proceed
+### 8. Advance
 
-After each section + review + commit:
-- Update `.devk/progress.md` (already committed with the section)
-- Move to next section or group
-- If a parallel group's siblings finished, dispatch the next sequential section
+Move to the next wave. Loop.
 
-**Note on parallel groups + commits:** sibling sections in a parallel group produce a single combined commit once *all* siblings have passed review (they share a checkpoint point). Commit message: `devk: [S3a, S3b] <group description>`.
+---
 
-## When all sections are done
+## When all waves are done
 
 ### 1. Carry-forward concern pass
 
-Run through any concerns you deferred. Fix them. Commit: `devk: carry-forward fixes`.
+Most concerns get fixed inline by review subagents under the new model, so this pass is often empty. If anything was deferred, fix it now. Commit: `devk: carry-forward fixes`.
 
 ### 2. Final review
 
@@ -203,7 +215,7 @@ Read `references/subagents/final-review.md` into working memory, then dispatch o
 
 - `subagent_type`: `"general-purpose"`
 - `model`: `"sonnet"` (or Opus for large changesets — use judgment)
-- `description`: "Final review"
+- `description`: `"Final review"`
 - `prompt`:
   ```
   You are doing a holistic end-of-work review. Follow these instructions exactly:
@@ -212,36 +224,32 @@ Read `references/subagents/final-review.md` into working memory, then dispatch o
 
   Context:
   - .devk/requirements.md, .devk/spec.md, .devk/plan.md have the intent.
-  - Pre-execution baseline SHA: <paste the baseline SHA recorded in Setup step 2>. The changeset to review is <baseline>..HEAD. (If "no baseline" was recorded, review the working tree + uncommitted diff.)
+  - Pre-execution baseline SHA: <paste the baseline SHA from Setup step 2>. The changeset is <baseline>..HEAD. (If "no baseline" was recorded, review the working tree + uncommitted diff.)
   - Return the structured report the instructions specify.
   ```
 
-When it returns, **apply the same default as per-section reviews: fix confirmed improvements inline, don't file them as TODOs.**
+When it returns:
 
 - **Critical findings** → fix. No discussion needed.
-- **Worth-addressing findings** → if any of them are clearly correct improvements (a real bug, a missed edge case, an inconsistency, a hidden hack, a missed integration), fix them inline as part of this pass. Default to doing, not asking.
-- **Only escalate to the user when:** a finding requires a spec-level change, introduces a new dependency, is clearly out of scope of the feature, or is genuinely ambiguous (it might not be an improvement). In those cases, state the finding plainly and ask.
+- **Worth-addressing findings** → if any are clearly correct improvements (a real bug, a missed edge case, an inconsistency, a hidden hack, a missed integration), fix them inline now. Default to doing, not asking.
+- **Escalate to the user only when:** a finding requires a spec-level change, introduces a new dependency, is clearly out of scope of the feature, or is genuinely ambiguous. Then state the finding plainly and ask.
 
-Commit everything fixed in this pass: `devk: improvements from final review`. That's the last quality gate before handoff.
+Commit everything fixed in this pass: `devk: improvements from final review`.
 
-### 3. Wrap-up and .devk/ cleanup offer
+### 3. Wrap-up and `.devk/` cleanup offer
 
-Once final review is clean and all improvements are committed, present the wrap-up.
-
-Keep the voice PM-friendly — describe what was built in product terms, not technical ones. Example tone: "Login now works end-to-end with Google sign-in and remembers sessions for a week" rather than "Implemented `AuthController.googleCallback` with JWT rotation".
-
-Use this shape:
+Present the wrap-up. PM-friendly voice — describe what was built in product terms, not technical ones.
 
 > ## Done
 >
 > <1-3 sentences describing what the user can now do, in plain language.>
 >
-> <Optional: one line about anything user-visible you want to call out — a new config flag, a migration they need to run, anything worth knowing.>
+> <Optional: one line about anything user-visible worth knowing — a new config flag, a migration to run, etc.>
 >
 > **Working notes** in `.devk/`:
 > - `requirements.md` — what we set out to build
 > - `spec.md` — the technical design
-> - `plan.md` — the N sections we broke it into (all done, all reviewed)
+> - `plan.md` — the waves we broke it into (all done, all reviewed)
 > - `progress.md` — section-by-section progress log
 >
 > What should I do with these? They've served their purpose.
@@ -253,28 +261,47 @@ Use this shape:
 
 Act on the answer:
 
-- **a)** `mkdir -p .devk/archive/<date>-<slug>/` and `git mv` (or `mv` if untracked) the four `.md` files into it. Commit: `devk: archive working notes for <feature title>`.
-- **b)** Write a single `.devk/summary.md` with: feature title, one-paragraph description of what shipped, and any TODOs worth remembering (drawn from carry-forward concerns / final review items you chose not to fix). Delete the four original files. Commit: `devk: summarize and clean up working notes for <feature title>`.
-- **c)** Show the file list, ask "delete these? yes/no", then `rm` on confirmation. Commit: `devk: remove working notes for <feature title>`.
+- **a)** `mkdir -p .devk/archive/<date>-<slug>/`, `git mv` (or `mv` if untracked) the four `.md` files into it. Commit: `devk: archive working notes for <feature title>`.
+- **b)** Write `.devk/summary.md`: feature title, one-paragraph description, any TODOs worth remembering (from carry-forward concerns or final-review items not fixed). Delete the four originals. Commit: `devk: summarize and clean up working notes for <feature title>`.
+- **c)** Show the file list, ask `"delete these? yes/no"`, then `rm` on confirmation. Commit: `devk: remove working notes for <feature title>`.
 - **d)** Do nothing.
 
-Skip the commit step silently if not a git repo.
+Skip commits silently if not a git repo.
+
+---
 
 ## What you do NOT do
 
-- Skip a section's review.
-- Mark a section "done" if tests don't pass.
+- Skip review on a section. Every section gets reviewed.
+- Mark a section "done" if its tests don't pass.
 - Silently fix spec-level problems with code hacks.
-- Advance through blockers by rationalizing "we can fix it later."
-- Bundle multiple sections into one subagent to go faster — one subagent per section is how we protect context.
+- Advance past blockers by rationalizing "we can fix it later."
+- Run wave `N+1` before wave `N` is fully reviewed and committed.
+- Bundle multiple sections into one subagent to "go faster" — one subagent per section per role.
+- Dispatch sections in a wave one at a time. Always one message, multiple Agent calls.
 
 ## Reminders
 
-- Quality over speed. A broken section stops the line.
-- Parallel groups in one message, serial sections one at a time.
-- Per-section review is mandatory.
-- **Default to fixing confirmed improvements. Don't hand the user a TODO list when you could just do the thing.**
+- Waves dispatch in ONE message with N Agent calls. Same for reviews.
+- Quality over speed. A failed wave stops the line.
+- Default to fixing confirmed improvements; don't hand the user a TODO list.
 - Human-facing voice is PM-friendly; technical artifacts stay technical.
 - Replan is a first-class outcome, not a failure.
-- Final review is the next step after all sections pass review (dispatch using `references/subagents/final-review.md`).
-- After final review: auto-fix, commit, then present wrap-up + `.devk/` cleanup offer.
+- Per-section commits in section-ID order for clean bisect history.
+
+## If the user wants to stop here
+
+If the user signals they want to pause or drop the work mid-execution ("stop", "let's pause", "actually nevermind"), acknowledge and offer to tidy up `.devk/`.
+
+> Got it — pausing this.
+>
+> Working notes in `.devk/`:
+> - `requirements.md`, `spec.md`, `plan.md`, `progress.md` — `<N>` of `<M>` sections done.
+>
+> What should I do with them?
+>
+> **a) Leave as-is** — I'll pick up next time. *Default if you might come back to this.*
+> **b) Archive** — move to `.devk/archive/<YYYY-MM-DD>-<slug>/`.
+> **c) Delete** — clean slate. I'll confirm first.
+
+Act on the answer the same way the other phases do.
